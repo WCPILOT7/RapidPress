@@ -100,7 +100,8 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
 
       const generatedRelease = completion.choices[0].message.content || '';
       
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
+      console.log('Creating press release for user:', userId);
       const pressRelease = await storage.createPressRelease(userId, {
         ...validatedData,
         headline: generatedHeadline,
@@ -116,7 +117,7 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   // Get all press releases
   app.get('/api/releases', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const releases = await storage.getPressReleases(userId);
       res.json(releases);
     } catch (error: any) {
@@ -127,7 +128,7 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   // Get press release by ID
   app.get('/api/releases/:id', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const release = await storage.getPressReleaseById(userId, id);
       if (!release) {
@@ -142,7 +143,7 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   // Update press release
   app.put('/api/releases/:id', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { release } = req.body;
       
@@ -161,7 +162,7 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   // Edit press release with AI
   app.post('/api/releases/:id/edit', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { instruction, currentContent } = req.body;
       
@@ -197,7 +198,7 @@ Please provide the updated press release content based on the user's instruction
   // Delete press release
   app.delete('/api/releases/:id', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       await storage.deletePressRelease(userId, id);
       res.json({ success: true });
@@ -233,7 +234,7 @@ Please provide the updated press release content based on the user's instruction
               insertContactSchema.parse(contact)
             );
             
-            const userId = req.user?.claims?.sub;
+            const userId = (req.user as any)?.claims?.sub;
             const createdContacts = await storage.createContacts(userId, validatedContacts);
             
             // Clean up uploaded file
@@ -259,7 +260,7 @@ Please provide the updated press release content based on the user's instruction
   // Get all contacts
   app.get('/api/contacts', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const contacts = await storage.getContacts(userId);
       res.json(contacts);
     } catch (error: any) {
@@ -270,7 +271,7 @@ Please provide the updated press release content based on the user's instruction
   // Delete contact
   app.delete('/api/contacts/:id', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       await storage.deleteContact(userId, id);
       res.json({ success: true });
@@ -284,7 +285,7 @@ Please provide the updated press release content based on the user's instruction
     try {
       const { releaseId, recipientIds, subject, customMessage } = req.body;
       
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const release = await storage.getPressReleaseById(userId, releaseId);
       if (!release) {
         return res.status(404).json({ error: 'Press release not found' });
@@ -336,7 +337,7 @@ Please provide the updated press release content based on the user's instruction
         return res.status(400).json({ error: 'Missing required fields: pressReleaseId, platform, type' });
       }
       
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const release = await storage.getPressReleaseById(userId, pressReleaseId);
       if (!release) {
         return res.status(404).json({ error: 'Press release not found' });
@@ -421,7 +422,7 @@ Please provide the updated press release content based on the user's instruction
   // Get all advertisements
   app.get('/api/advertisements', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const advertisements = await storage.getAdvertisements(userId);
       res.json(advertisements);
     } catch (error: any) {
@@ -432,7 +433,7 @@ Please provide the updated press release content based on the user's instruction
   // Get advertisements by press release ID
   app.get('/api/advertisements/press-release/:id', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const pressReleaseId = parseInt(req.params.id);
       const advertisements = await storage.getAdvertisementsByPressReleaseId(userId, pressReleaseId);
       res.json(advertisements);
@@ -444,7 +445,7 @@ Please provide the updated press release content based on the user's instruction
   // Update advertisement
   app.put('/api/advertisements/:id', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { content, title } = req.body;
       
@@ -466,7 +467,7 @@ Please provide the updated press release content based on the user's instruction
   // Edit advertisement with AI
   app.post('/api/advertisements/:id/edit', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { instruction, currentContent } = req.body;
       
@@ -503,7 +504,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
   // Generate image for advertisement
   app.post('/api/advertisements/:id/generate-image', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { imagePrompt } = req.body;
       
@@ -549,7 +550,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
 
   app.post('/api/advertisements/:id/regenerate-image', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { imagePrompt } = req.body;
       
@@ -596,7 +597,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
   // Upload custom image for advertisement
   app.post('/api/advertisements/:id/upload-image', isAuthenticated, upload.single('image'), async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       
       const existingAd = await storage.getAdvertisementById(userId, id);
@@ -626,7 +627,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
   // Delete advertisement
   app.delete('/api/advertisements/:id', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       await storage.deleteAdvertisement(userId, id);
       res.json({ success: true });
