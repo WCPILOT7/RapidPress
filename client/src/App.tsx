@@ -11,16 +11,13 @@ import Advertisements from "@/pages/advertisements";
 import Test from "@/pages/test";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-  
-  // Development mode bypass - check URL parameter
-  const urlParams = new URLSearchParams(window.location.search);
-  const isDev = urlParams.get('bypass') === 'true';
-
-  // Simple routing debug - just show the test component for now
+  // Simple test - bypass all routing for now
   return (
-    <div>
-      <Test />
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Debug Test</h1>
+      <p>Current URL: {window.location.href}</p>
+      <p>Search: {window.location.search}</p>
+      <p>Bypass: {new URLSearchParams(window.location.search).get('bypass')}</p>
     </div>
   );
 }
