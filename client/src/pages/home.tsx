@@ -157,16 +157,30 @@ export default function Home() {
     },
   });
 
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const onSubmit = (data: FormData) => {
-    try {
-      generateMutation.mutate(data);
-    } catch (error) {
-      console.error('Form submission error:', error);
-      toast({
-        title: "Submission Error",
-        description: "Unable to submit form. Please try again.",
-        variant: "destructive",
-      });
+    // Only submit if we're on the final step and explicitly generating
+    if (currentStep === formSteps.length - 1 && isGenerating) {
+      try {
+        generateMutation.mutate(data);
+        setIsGenerating(false);
+      } catch (error) {
+        console.error('Form submission error:', error);
+        toast({
+          title: "Submission Error",
+          description: "Unable to submit form. Please try again.",
+          variant: "destructive",
+        });
+        setIsGenerating(false);
+      }
+    }
+  };
+
+  const handleGenerateClick = () => {
+    if (currentStep === formSteps.length - 1 && isStepValid(currentStep)) {
+      setIsGenerating(true);
+      form.handleSubmit(onSubmit)();
     }
   };
 
@@ -402,7 +416,14 @@ export default function Home() {
                   <div className="p-6">
                     
                     <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      <form 
+                        onSubmit={(e) => {
+                          e.preventDefault(); // Prevent default form submission
+                          // Only allow submission through explicit generate button click
+                          return false;
+                        }} 
+                        className="space-y-6"
+                      >
                         {/* Step 0: Company Info */}
                         {currentStep === 0 && (
                           <div className="space-y-6" style={{ minHeight: '400px' }}>
@@ -624,7 +645,8 @@ export default function Home() {
                             </Button>
                           ) : (
                             <Button
-                              type="submit"
+                              type="button"
+                              onClick={handleGenerateClick}
                               disabled={generateMutation.isPending || !isStepValid(currentStep)}
                               className="flex items-center bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
                             >

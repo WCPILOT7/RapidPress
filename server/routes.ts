@@ -49,21 +49,11 @@ const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunctio
 };
 
 const attachUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  // Debug session information
-  console.log('Session ID:', req.sessionID);
-  console.log('Session userId:', req.session?.userId);
-  console.log('Cookie header:', req.headers.cookie);
-  
   if (req.session?.userId) {
     const user = await storage.getUserById(req.session.userId);
     if (user) {
       req.user = { id: user.id, email: user.email, name: user.name };
-      console.log('User attached:', req.user);
-    } else {
-      console.log('User not found for ID:', req.session.userId);
     }
-  } else {
-    console.log('No session userId found');
   }
   next();
 };
