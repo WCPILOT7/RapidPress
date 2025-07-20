@@ -11,10 +11,14 @@ import Advertisements from "@/pages/advertisements";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  
+  // Development mode bypass - check URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const isDev = urlParams.get('bypass') === 'true';
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
+      {!isDev && (isLoading || !isAuthenticated) ? (
         <Route path="/" component={Landing} />
       ) : (
         <>
