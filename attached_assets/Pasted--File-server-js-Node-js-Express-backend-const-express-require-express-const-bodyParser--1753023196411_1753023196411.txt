@@ -1,0 +1,162 @@
+// File: server.js (Node.js + Express backend)
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const sqlite3 = require('sqlite3').verbose();
+const multer = require('multer');
+const fs = require('fs');
+const csv = require('csv-parser');
+const nodemailer = require('nodemailer');
+const { Configuration, OpenAIApi } = require('openai');
+require('dotenv').config();
+
+const app = express();
+const port = 3000;
+
+app.use(cors());
+app.use(bodyParser.json());
+
+// DB Setup
+const db = new sqlite3.Database('./pr_drafts.db');
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS press_releases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company TEXT,
+    headline TEXT,
+    copy TEXT,
+    contact TEXT,
+    quote TEXT,
+    competitors TEXT,
+    release TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT,
+    publication TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+});
+
+// OpenAI Setup
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+
+// Route to generate a press release
+app.post('/generate', async (req, res) => {
+  const { company, headline, copy, contact, quote, competitors } = req.body;
+
+  const prompt = `Write a professional press release based on the following:
+
+Company: ${company}
+Headline: ${headline}
+Copy: ${copy}
+PR Contact: ${contact}
+Quote: ${quote}
+Competitor Info: ${competitors}
+
+Structure it with a compelling headline, subheadline, main body, quote, and boilerplate.`;
+
+  try {
+    const completion = await openai.createChatCompletion({
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: 'You are a public relations expert.' },
+        { role: 'user', content: prompt },
+      ],
+    });
+
+    const generatedRelease = completion.data.choices[0].message.content;
+
+    db.run(
+      `INSERT INTO press_releases (company, headline, copy, contact, quote, competitors, release) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [company, headline, copy, contact, quote, competitors, generatedRelease],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: this.lastID, release: generatedRelease });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route to fetch all releases
+app.get('/releases', (req, res) => {
+  db.all('SELECT * FROM press_releases ORDER BY created_at DESC', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// File upload setup
+const upload = multer({ dest: 'uploads/' });
+
+// Upload PR contact CSV
+app.post('/upload-contacts', upload.single('contacts'), (req, res) => {
+  const filePath = req.file.path;
+
+  const results = [];
+  fs.createReadStream(filePath)
+    .pipe(csv())
+    .on('data', (row) => {
+      results.push(row);
+    })
+    .on('end', () => {
+      results.forEach(({ name, email, publication }) => {
+        db.run(
+          `INSERT INTO contacts (name, email, publication) VALUES (?, ?, ?)`,
+          [name, email, publication]
+        );
+      });
+      res.json({ message: 'Contacts uploaded successfully', total: results.length });
+    });
+});
+
+// Get uploaded contacts
+app.get('/contacts', (req, res) => {
+  db.all('SELECT * FROM contacts ORDER BY created_at DESC', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Email sending setup
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// Send release to contacts
+app.post('/send-release', (req, res) => {
+  const { releaseId } = req.body;
+  db.get('SELECT * FROM press_releases WHERE id = ?', [releaseId], (err, releaseRow) => {
+    if (err || !releaseRow) return res.status(404).json({ error: 'Press release not found' });
+
+    db.all('SELECT * FROM contacts', [], async (err, contacts) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      for (const contact of contacts) {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: contact.email,
+          subject: `${releaseRow.headline} - Press Release`,
+          text: releaseRow.release,
+        });
+      }
+
+      res.json({ message: `Press release ID ${releaseId} sent to ${contacts.length} contacts.` });
+    });
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
