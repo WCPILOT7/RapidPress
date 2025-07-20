@@ -360,11 +360,12 @@ export default function Home() {
 
                   {/* Form Content */}
                   <div className="p-6">
+                    
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         {/* Step 0: Company Info */}
                         {currentStep === 0 && (
-                          <div className="space-y-6 animate-in fade-in duration-300">
+                          <div className="space-y-6" style={{ minHeight: '400px' }}>
                             <div className="text-center mb-6">
                               <Building className="w-12 h-12 text-blue-600 mx-auto mb-3" />
                               <h3 className="text-xl font-bold text-gray-900">Company Information</h3>
@@ -447,7 +448,7 @@ export default function Home() {
 
                         {/* Step 1: Brand Voice */}
                         {currentStep === 1 && (
-                          <div className="space-y-6 animate-in fade-in duration-300">
+                          <div className="space-y-6">
                             <div className="text-center mb-6">
                               <Palette className="w-12 h-12 text-purple-600 mx-auto mb-3" />
                               <h3 className="text-xl font-bold text-gray-900">Brand Voice & Guidelines</h3>
@@ -477,7 +478,7 @@ export default function Home() {
 
                         {/* Step 2: Content */}
                         {currentStep === 2 && (
-                          <div className="space-y-6 animate-in fade-in duration-300">
+                          <div className="space-y-6">
                             <div className="text-center mb-6">
                               <FileTextIcon className="w-12 h-12 text-green-600 mx-auto mb-3" />
                               <h3 className="text-xl font-bold text-gray-900">Main Content</h3>
@@ -507,7 +508,7 @@ export default function Home() {
 
                         {/* Step 3: Quotes & Context */}
                         {currentStep === 3 && (
-                          <div className="space-y-6 animate-in fade-in duration-300">
+                          <div className="space-y-6">
                             <div className="text-center mb-6">
                               <Quote className="w-12 h-12 text-orange-600 mx-auto mb-3" />
                               <h3 className="text-xl font-bold text-gray-900">Quotes & Context</h3>
