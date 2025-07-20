@@ -24,6 +24,17 @@ export const contacts = pgTable("contacts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const advertisements = pgTable("advertisements", {
+  id: serial("id").primaryKey(),
+  pressReleaseId: integer("press_release_id").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  platform: text("platform").notNull(), // "facebook", "twitter", "linkedin", "instagram", "google_ads"
+  type: text("type").notNull(), // "social_media", "ad"
+  imagePrompt: text("image_prompt"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertPressReleaseSchema = createInsertSchema(pressReleases).omit({
   id: true,
   headline: true,
@@ -36,7 +47,14 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   createdAt: true,
 });
 
+export const insertAdvertisementSchema = createInsertSchema(advertisements).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertPressRelease = z.infer<typeof insertPressReleaseSchema>;
 export type PressRelease = typeof pressReleases.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
+export type InsertAdvertisement = z.infer<typeof insertAdvertisementSchema>;
+export type Advertisement = typeof advertisements.$inferSelect;

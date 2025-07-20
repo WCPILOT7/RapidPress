@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPressReleaseSchema, insertContactSchema } from "@shared/schema";
+import { insertPressReleaseSchema, insertContactSchema, insertAdvertisementSchema } from "@shared/schema";
 import OpenAI from "openai";
 import multer from "multer";
 import fs from "fs";
@@ -291,6 +291,121 @@ Please provide the updated press release content based on the user's instruction
         message: `Press release sent successfully`,
         recipients: contacts.length
       });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create advertisement from press release
+  app.post('/api/advertisements', async (req, res) => {
+    try {
+      const { pressReleaseId, platform, type } = req.body;
+      
+      const release = await storage.getPressReleaseById(pressReleaseId);
+      if (!release) {
+        return res.status(404).json({ error: 'Press release not found' });
+      }
+
+      let prompt = '';
+      let title = '';
+      
+      if (type === 'social_media') {
+        switch (platform) {
+          case 'twitter':
+            prompt = `Create a compelling Twitter/X post based on this press release. Keep it under 280 characters and make it engaging with relevant hashtags:\n\n${release.release}`;
+            title = `Twitter Post - ${release.headline}`;
+            break;
+          case 'facebook':
+            prompt = `Create an engaging Facebook post based on this press release. Make it conversational and include a call-to-action:\n\n${release.release}`;
+            title = `Facebook Post - ${release.headline}`;
+            break;
+          case 'linkedin':
+            prompt = `Create a professional LinkedIn post based on this press release. Make it business-focused and include relevant industry hashtags:\n\n${release.release}`;
+            title = `LinkedIn Post - ${release.headline}`;
+            break;
+          case 'instagram':
+            prompt = `Create an Instagram caption based on this press release. Make it visually engaging and include relevant hashtags:\n\n${release.release}`;
+            title = `Instagram Post - ${release.headline}`;
+            break;
+        }
+      } else if (type === 'ad') {
+        switch (platform) {
+          case 'google_ads':
+            prompt = `Create a Google Ads text advertisement based on this press release. Include a compelling headline, description, and call-to-action. Keep headlines under 30 characters and descriptions under 90 characters:\n\n${release.release}`;
+            title = `Google Ad - ${release.headline}`;
+            break;
+          case 'facebook':
+            prompt = `Create a Facebook ad copy based on this press release. Make it compelling and include a strong call-to-action:\n\n${release.release}`;
+            title = `Facebook Ad - ${release.headline}`;
+            break;
+        }
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: `You are a social media and advertising expert. Create compelling, platform-specific content that drives engagement and action.` },
+          { role: 'user', content: prompt },
+        ],
+      });
+
+      const content = completion.choices[0].message.content || '';
+
+      // Generate image prompt for visual content
+      let imagePrompt = '';
+      if (platform === 'instagram' || platform === 'facebook') {
+        const imageCompletion = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: 'You are an expert at creating detailed image prompts for social media content.' },
+            { role: 'user', content: `Create a detailed image prompt for a ${platform} post about this: ${release.headline}. The image should be visually appealing and relevant to the content.` },
+          ],
+        });
+        imagePrompt = imageCompletion.choices[0].message.content || '';
+      }
+
+      const advertisement = await storage.createAdvertisement({
+        pressReleaseId,
+        title,
+        content,
+        platform,
+        type,
+        imagePrompt: imagePrompt || undefined,
+      });
+
+      res.json(advertisement);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all advertisements
+  app.get('/api/advertisements', async (req, res) => {
+    try {
+      const advertisements = await storage.getAdvertisements();
+      res.json(advertisements);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get advertisements by press release ID
+  app.get('/api/advertisements/press-release/:id', async (req, res) => {
+    try {
+      const pressReleaseId = parseInt(req.params.id);
+      const advertisements = await storage.getAdvertisementsByPressReleaseId(pressReleaseId);
+      res.json(advertisements);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete advertisement
+  app.delete('/api/advertisements/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteAdvertisement(id);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

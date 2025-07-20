@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Newspaper, FileText, Users, Send, Wand2, Eye, Trash2, Upload, Edit, Save, X } from "lucide-react";
+import { Newspaper, FileText, Users, Send, Share2, Wand2, Eye, Trash2, Upload, Edit, Save, X } from "lucide-react";
+import { Link } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -162,6 +163,10 @@ export default function Home() {
     { id: "distribute", label: "Distribute", icon: Send },
   ];
 
+  const externalNavItems = [
+    { id: "advertisements", label: "Advertisements", icon: Share2, path: "/advertisements" },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Navigation Header */}
@@ -189,6 +194,19 @@ export default function Home() {
                       <Icon className="w-4 h-4 mr-2" />
                       {item.label}
                     </button>
+                  );
+                })}
+                {externalNavItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link 
+                      key={item.id}
+                      href={item.path}
+                      className="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    >
+                      <Icon className="w-4 h-4 mr-2" />
+                      {item.label}
+                    </Link>
                   );
                 })}
               </nav>

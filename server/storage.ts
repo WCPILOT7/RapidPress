@@ -1,4 +1,4 @@
-import { pressReleases, contacts, type PressRelease, type InsertPressRelease, type Contact, type InsertContact } from "@shared/schema";
+import { pressReleases, contacts, advertisements, type PressRelease, type InsertPressRelease, type Contact, type InsertContact, type Advertisement, type InsertAdvertisement } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -15,6 +15,12 @@ export interface IStorage {
   createContacts(contacts: InsertContact[]): Promise<Contact[]>;
   getContacts(): Promise<Contact[]>;
   deleteContact(id: number): Promise<void>;
+  
+  // Advertisement methods
+  createAdvertisement(advertisement: InsertAdvertisement): Promise<Advertisement>;
+  getAdvertisements(): Promise<Advertisement[]>;
+  getAdvertisementsByPressReleaseId(pressReleaseId: number): Promise<Advertisement[]>;
+  deleteAdvertisement(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -81,6 +87,35 @@ export class DatabaseStorage implements IStorage {
 
   async deleteContact(id: number): Promise<void> {
     await db.delete(contacts).where(eq(contacts.id, id));
+  }
+
+  async createAdvertisement(advertisement: InsertAdvertisement): Promise<Advertisement> {
+    const [newAdvertisement] = await db
+      .insert(advertisements)
+      .values({
+        ...advertisement,
+        imagePrompt: advertisement.imagePrompt || null,
+      })
+      .returning();
+    return newAdvertisement;
+  }
+
+  async getAdvertisements(): Promise<Advertisement[]> {
+    const results = await db.select().from(advertisements).orderBy(advertisements.createdAt);
+    return results.reverse(); // Newest first
+  }
+
+  async getAdvertisementsByPressReleaseId(pressReleaseId: number): Promise<Advertisement[]> {
+    const results = await db
+      .select()
+      .from(advertisements)
+      .where(eq(advertisements.pressReleaseId, pressReleaseId))
+      .orderBy(advertisements.createdAt);
+    return results.reverse(); // Newest first
+  }
+
+  async deleteAdvertisement(id: number): Promise<void> {
+    await db.delete(advertisements).where(eq(advertisements.id, id));
   }
 }
 
