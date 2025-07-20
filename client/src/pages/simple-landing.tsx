@@ -8,10 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 
 export default function SimpleLanding() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(false);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('test@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login, register } = useAuth();
@@ -85,7 +85,7 @@ export default function SimpleLanding() {
           <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="pb-4">
               <div className="mb-4">
-                <span className="text-2xl">✨</span>
+                <span className="text-3xl">✨</span>
               </div>
               <CardTitle className="text-xl">AI-Powered Generation</CardTitle>
             </CardHeader>
@@ -99,7 +99,7 @@ export default function SimpleLanding() {
           <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="pb-4">
               <div className="mb-4">
-                <span className="text-2xl">👥</span>
+                <span className="text-3xl">👥</span>
               </div>
               <CardTitle className="text-xl">Contact Management</CardTitle>
             </CardHeader>
@@ -113,7 +113,7 @@ export default function SimpleLanding() {
           <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="pb-4">
               <div className="mb-4">
-                <span className="text-2xl">🚀</span>
+                <span className="text-3xl">🚀</span>
               </div>
               <CardTitle className="text-xl">Multi-Platform Distribution</CardTitle>
             </CardHeader>
@@ -123,24 +123,66 @@ export default function SimpleLanding() {
               </CardDescription>
             </CardContent>
           </Card>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-4">
+              <div className="mb-4">
+                <span className="text-3xl">⚡</span>
+              </div>
+              <CardTitle className="text-xl">Lightning Fast</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-gray-600 leading-relaxed">
+                Generate, edit, and distribute content faster than traditional methods
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-4">
+              <div className="mb-4">
+                <span className="text-3xl">🔒</span>
+              </div>
+              <CardTitle className="text-xl">Secure & Private</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-gray-600 leading-relaxed">
+                Your data is protected with enterprise-grade security and user isolation
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-4">
+              <div className="mb-4">
+                <span className="text-3xl">⏰</span>
+              </div>
+              <CardTitle className="text-xl">Save Hours of Work</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-gray-600 leading-relaxed">
+                Automate your PR workflow and focus on strategy instead of manual writing
+              </CardDescription>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Auth Section */}
-        <div className="max-w-md mx-auto">
-          <Card className="shadow-2xl border-0">
+        <div className="max-w-lg mx-auto">
+          <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center pb-6">
-              <CardTitle className="text-2xl">
-                {isLogin ? 'Sign In to PR Studio' : 'Create Your Account'}
+              <CardTitle className="text-3xl font-bold">
+                {isLogin ? 'Welcome Back!' : 'Start Your Free Trial'}
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-gray-600 text-lg">
                 {isLogin 
-                  ? 'Welcome back! Enter your credentials to continue'
-                  : 'Join thousands of PR professionals using our platform'
+                  ? 'Sign in to continue to your dashboard'
+                  : 'Join thousands of PR professionals transforming their workflow'
                 }
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6 px-8">
                 {!isLogin && (
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
@@ -198,35 +240,92 @@ export default function SimpleLanding() {
                 
                 <Button 
                   type="submit" 
-                  className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" 
+                  className="w-full h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200" 
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+                  {isLoading ? 'Processing...' : (isLogin ? 'Sign In to Dashboard' : 'Start Free Trial - No Credit Card Required')}
                 </Button>
 
-                {isLogin && (
+                {!isLogin && (
                   <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-2">
-                      Demo credentials: test@example.com / password123
+                    <p className="text-sm text-gray-500">
+                      Free forever • No setup fees • Cancel anytime
                     </p>
                   </div>
                 )}
 
-                <div className="text-center pt-4">
+                {isLogin && (
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500">
+                      Demo account: test@example.com / password123
+                    </p>
+                  </div>
+                )}
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-gray-500">or</span>
+                  </div>
+                </div>
+
+                <div className="text-center">
                   <p className="text-sm text-gray-600">
-                    {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+                    {isLogin ? "Don't have an account?" : "Already registered?"}{' '}
                     <button
                       type="button"
-                      onClick={() => setIsLogin(!isLogin)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      onClick={() => {
+                        setIsLogin(!isLogin);
+                        if (!isLogin) {
+                          // Switching to login, prefill demo credentials
+                          setEmail('test@example.com');
+                          setPassword('password123');
+                        } else {
+                          // Switching to signup, clear fields
+                          setEmail('');
+                          setPassword('');
+                          setName('');
+                        }
+                      }}
+                      className="text-blue-600 hover:text-blue-800 font-semibold underline"
                     >
-                      {isLogin ? 'Sign up' : 'Sign in'}
+                      {isLogin ? 'Create free account' : 'Sign in here'}
                     </button>
                   </p>
                 </div>
               </CardContent>
             </form>
           </Card>
+        </div>
+
+        {/* Social Proof */}
+        <div className="text-center mt-16">
+          <p className="text-gray-500 text-sm mb-6">Trusted by professionals at leading companies</p>
+          <div className="flex items-center justify-center space-x-12 opacity-60">
+            <div className="text-xl font-bold text-gray-400">TechCorp</div>
+            <div className="text-xl font-bold text-gray-400">MediaFlow</div>
+            <div className="text-xl font-bold text-gray-400">StartupLab</div>
+            <div className="text-xl font-bold text-gray-400">InnovatePR</div>
+            <div className="text-xl font-bold text-gray-400">GlobalNews</div>
+          </div>
+        </div>
+
+        {/* Trust Indicators */}
+        <div className="flex justify-center space-x-8 mt-12">
+          <div className="flex items-center text-sm text-gray-500">
+            <span className="text-green-500 mr-2">✓</span>
+            SOC 2 Compliant
+          </div>
+          <div className="flex items-center text-sm text-gray-500">
+            <span className="text-green-500 mr-2">✓</span>
+            GDPR Ready
+          </div>
+          <div className="flex items-center text-sm text-gray-500">
+            <span className="text-green-500 mr-2">✓</span>
+            99.9% Uptime
+          </div>
         </div>
       </div>
     </div>
