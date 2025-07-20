@@ -23,6 +23,8 @@ const formSchema = z.object({
   contact: z.string().min(1, "PR contact is required"),
   contactEmail: z.string().email("Valid email is required"),
   contactPhone: z.string().min(1, "Phone number is required"),
+  date: z.string().min(1, "Release date is required"),
+  brandTone: z.string().optional(),
   quote: z.string().optional(),
   competitors: z.string().optional(),
 });
@@ -45,6 +47,8 @@ export default function Home() {
       contact: "",
       contactEmail: "",
       contactPhone: "",
+      date: "",
+      brandTone: "",
       quote: "",
       competitors: "",
     },
@@ -292,6 +296,38 @@ export default function Home() {
                           )}
                         />
                       </div>
+
+                      <FormField
+                        control={form.control}
+                        name="date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Release Date *</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandTone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Brand Tone, Voice & Guidelines</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                rows={3}
+                                placeholder="Describe your brand's tone of voice, writing style, or specific guidelines (e.g., formal, casual, technical, friendly, etc.)..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
                       <FormField
                         control={form.control}
