@@ -98,12 +98,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: hashedPassword,
       });
 
-      // Create session
+      // Create session and save it
       req.session.userId = user.id;
       
-      // Return user without password
-      const { password, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword });
+      // Save session before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: 'Session save failed' });
+        }
+        
+        // Return user without password
+        const { password, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword });
+      });
     } catch (error) {
       console.error('Registration error:', error);
       res.status(400).json({ error: 'Registration failed' });
@@ -126,12 +134,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // Create session
+      // Create session and save it
       req.session.userId = user.id;
       
-      // Return user without password
-      const { password, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword });
+      // Save session before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: 'Session save failed' });
+        }
+        
+        // Return user without password
+        const { password, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword });
+      });
     } catch (error) {
       console.error('Login error:', error);
       res.status(400).json({ error: 'Login failed' });
