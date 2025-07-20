@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Share2, Facebook, Twitter, Linkedin, Instagram, Monitor, Plus, Trash2, Copy, Eye, Newspaper, ArrowLeft, Edit, Save, X, RefreshCw, Image as ImageIcon, Upload } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import type { PressRelease, Advertisement } from "@shared/schema";
 
@@ -45,7 +47,23 @@ export default function Advertisements() {
   const [isImageEditMode, setIsImageEditMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user, isLoading } = useAuth();
   const queryClient = useQueryClient();
+
+  // Redirect to login if unauthorized
+  useEffect(() => {
+    if (!isLoading && !user) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [user, isLoading, toast]);
 
   // Fetch press releases and advertisements
   const { data: pressReleases = [], isLoading: releasesLoading } = useQuery<PressRelease[]>({

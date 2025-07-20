@@ -1,8 +1,26 @@
-import { pressReleases, contacts, advertisements, type PressRelease, type InsertPressRelease, type Contact, type InsertContact, type Advertisement, type InsertAdvertisement } from "@shared/schema";
+import {
+  pressReleases,
+  contacts,
+  advertisements,
+  users,
+  type PressRelease,
+  type InsertPressRelease,
+  type Contact,
+  type InsertContact,
+  type Advertisement,
+  type InsertAdvertisement,
+  type User,
+  type UpsertUser,
+} from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations
+  // (IMPORTANT) these user operations are mandatory for Replit Auth.
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
   // Press Release methods
   createPressRelease(pressRelease: InsertPressRelease & { headline: string; release: string }): Promise<PressRelease>;
   getPressReleases(): Promise<PressRelease[]>;
@@ -26,6 +44,28 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User operations
+  // (IMPORTANT) these user operations are mandatory for Replit Auth.
+
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
   async createPressRelease(data: InsertPressRelease & { headline: string; release: string }): Promise<PressRelease> {
     const [pressRelease] = await db
       .insert(pressReleases)
