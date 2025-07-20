@@ -168,7 +168,7 @@ export default function SimpleLanding() {
         </div>
 
         {/* Auth Section */}
-        <div className="max-w-lg mx-auto">
+        <div className="w-full max-w-4xl mx-auto">
           <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center pb-6">
               <CardTitle className="text-3xl font-bold">
@@ -182,61 +182,63 @@ export default function SimpleLanding() {
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-6 px-8">
-                {!isLogin && (
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+              <CardContent className="space-y-6 px-4 sm:px-8 md:px-12 lg:px-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {!isLogin && (
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="Enter your full name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="email">Email Address</Label>
                     <Input
-                      id="name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                       className="h-12"
                     />
                   </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="h-12"
-                  />
-                </div>
-                {!isLogin && (
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className={`space-y-2 ${!isLogin ? '' : 'md:col-span-2'}`}>
+                    <Label htmlFor="password">Password</Label>
                     <Input
-                      id="confirmPassword"
+                      id="password"
                       type="password"
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
                       className="h-12"
                     />
                   </div>
-                )}
+                  {!isLogin && (
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="Confirm your password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="h-12"
+                      />
+                    </div>
+                  )}
+                </div>
                 
                 <Button 
                   type="submit" 
