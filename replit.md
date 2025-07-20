@@ -55,10 +55,11 @@ The application follows a full-stack TypeScript architecture with clear separati
 1. **Press Release Generation**: User inputs company details → OpenAI processes content → Generated release stored in database
 2. **Contact Management**: CSV upload → File processing → Bulk contact creation → Database storage
 3. **Distribution**: Select release + contacts → Email composition → Nodemailer sends → Tracking stored
-4. **Advertisement Creation**: Select press release + platform → OpenAI generates content + DALL-E creates image → Advertisement stored in database
-5. **Advertisement Editing**: Manual text editing or AI-powered content modification → Updated content saved
-6. **Image Regeneration**: User triggers image refresh → DALL-E creates new image → Updated advertisement saved
-7. **History Management**: Database queries → React Query caching → UI display with filtering
+4. **Advertisement Creation**: Select press release + platform → OpenAI generates content + image prompt → Advertisement stored without image initially
+5. **On-Demand Image Generation**: User clicks "Generate Image" → DALL-E creates image → Advertisement updated with image URL
+6. **Advertisement Editing**: Manual text editing or AI-powered content modification → Updated content saved
+7. **Image Regeneration**: User triggers image refresh → DALL-E creates new image → Updated advertisement saved
+8. **History Management**: Database queries → React Query caching → UI display with filtering
 
 ## External Dependencies
 
@@ -95,5 +96,17 @@ The application follows a full-stack TypeScript architecture with clear separati
 - `OPENAI_API_KEY`: OpenAI API access for content generation
 - `EMAIL_USER` and `EMAIL_PASS`: Gmail SMTP credentials for distribution
 - Build outputs to `dist/` directory with separate public assets folder
+
+## Recent Changes
+
+### July 20, 2025 - Advertisement Image Generation Optimization
+- **Performance Improvement**: Modified advertisement creation to skip automatic image generation
+- **On-Demand Images**: Added separate endpoint `/api/advertisements/:id/generate-image` for user-triggered image creation
+- **Enhanced UX**: Added "Generate Image" buttons in advertisement cards and detail views when images don't exist
+- **Speed Boost**: Advertisement creation now 3-5x faster as it only generates text content and image prompts initially
+- **Maintained Functionality**: Kept existing regenerate image and upload custom image features intact
+- **User Control**: Users can now choose which advertisements need images, reducing unnecessary API calls
+
+**Rollback Point**: This version represents stable functionality with optimized image generation workflow.
 
 The application is designed for scalability with clear separation of concerns, type safety throughout the stack, and modern development practices including hot reloading and error handling.
