@@ -189,6 +189,28 @@ export default function Advertisements() {
     },
   });
 
+  // Generate image mutation (initial generation)
+  const generateImageMutation = useMutation({
+    mutationFn: async ({ id, imagePrompt }: { id: number; imagePrompt?: string }) => {
+      const response = await apiRequest('POST', `/api/advertisements/${id}/generate-image`, { imagePrompt });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Image generated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/advertisements"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate image",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Regenerate image mutation
   const regenerateImageMutation = useMutation({
     mutationFn: async ({ id, imagePrompt }: { id: number; imagePrompt?: string }) => {
@@ -303,6 +325,13 @@ export default function Advertisements() {
       id: editingAd.id,
       instruction: aiInstruction,
       currentContent: editedContent,
+    });
+  };
+
+  const handleGenerateImage = (ad: Advertisement, customPrompt?: string) => {
+    generateImageMutation.mutate({ 
+      id: ad.id, 
+      imagePrompt: customPrompt || ad.imagePrompt || undefined
     });
   };
 
@@ -611,8 +640,53 @@ export default function Advertisements() {
                       
                       {ad.imagePrompt && !ad.imageUrl && (
                         <div className="bg-blue-50 p-3 rounded-lg">
-                          <p className="text-xs font-medium text-blue-800 mb-1">Image Suggestion:</p>
+                          <div className="flex items-start justify-between mb-2">
+                            <p className="text-xs font-medium text-blue-800">Image Suggestion:</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleGenerateImage(ad)}
+                              disabled={generateImageMutation.isPending}
+                              className="h-6 px-2 text-xs"
+                            >
+                              {generateImageMutation.isPending ? (
+                                <div className="flex items-center">
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600 mr-1"></div>
+                                  Generating...
+                                </div>
+                              ) : (
+                                <>
+                                  <ImageIcon className="w-3 h-3 mr-1" />
+                                  Generate Image
+                                </>
+                              )}
+                            </Button>
+                          </div>
                           <p className="text-xs text-blue-700 line-clamp-2">{ad.imagePrompt}</p>
+                        </div>
+                      )}
+                      
+                      {!ad.imagePrompt && !ad.imageUrl && (ad.platform === 'instagram' || ad.platform === 'facebook' || ad.platform === 'linkedin' || ad.type === 'ad') && (
+                        <div className="bg-gray-50 p-3 rounded-lg text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateImage(ad)}
+                            disabled={generateImageMutation.isPending}
+                            className="w-full"
+                          >
+                            {generateImageMutation.isPending ? (
+                              <div className="flex items-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b border-gray-600 mr-2"></div>
+                                Generating Image...
+                              </div>
+                            ) : (
+                              <>
+                                <ImageIcon className="w-4 h-4 mr-2" />
+                                Generate Image
+                              </>
+                            )}
+                          </Button>
                         </div>
                       )}
                       
@@ -648,7 +722,7 @@ export default function Advertisements() {
                           <Copy className="w-4 h-4 mr-1" />
                           Copy
                         </Button>
-                        {ad.imageUrl && (
+                        {ad.imageUrl ? (
                           <Button
                             variant="outline"
                             size="sm"
@@ -658,6 +732,26 @@ export default function Advertisements() {
                           >
                             <RefreshCw className={`w-4 h-4 mr-1 ${regenerateImageMutation.isPending ? 'animate-spin' : ''}`} />
                             New Image
+                          </Button>
+                        ) : (ad.platform === 'instagram' || ad.platform === 'facebook' || ad.platform === 'linkedin' || ad.type === 'ad') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateImage(ad)}
+                            disabled={generateImageMutation.isPending}
+                            className="w-full"
+                          >
+                            {generateImageMutation.isPending ? (
+                              <div className="flex items-center">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-600 mr-1"></div>
+                                Generating...
+                              </div>
+                            ) : (
+                              <>
+                                <ImageIcon className="w-4 h-4 mr-1" />
+                                Generate Image
+                              </>
+                            )}
                           </Button>
                         )}
                       </div>
@@ -693,7 +787,7 @@ export default function Advertisements() {
                   </Badge>
                 </div>
 
-                {viewingAd.imageUrl && (
+                {viewingAd.imageUrl ? (
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium">
@@ -727,6 +821,40 @@ export default function Advertisements() {
                       alt="Advertisement image"
                       className="w-full max-w-md mx-auto rounded-lg border"
                     />
+                  </div>
+                ) : (viewingAd.platform === 'instagram' || viewingAd.platform === 'facebook' || viewingAd.platform === 'linkedin' || viewingAd.type === 'ad') && (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <h4 className="font-medium text-gray-700 mb-2">No Image Generated</h4>
+                    <p className="text-sm text-gray-500 mb-4">Generate an AI image to enhance your {viewingAd.type === 'social_media' ? 'social media post' : 'advertisement'}.</p>
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        onClick={() => handleGenerateImage(viewingAd)}
+                        disabled={generateImageMutation.isPending}
+                        size="sm"
+                      >
+                        {generateImageMutation.isPending ? (
+                          <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Generating...
+                          </div>
+                        ) : (
+                          <>
+                            <ImageIcon className="w-4 h-4 mr-2" />
+                            Generate Image
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFileSelect(viewingAd)}
+                        disabled={uploadImageMutation.isPending}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Image
+                      </Button>
+                    </div>
                   </div>
                 )}
                 

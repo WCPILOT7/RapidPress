@@ -361,9 +361,8 @@ Please provide the updated press release content based on the user's instruction
 
       const content = completion.choices[0].message.content || '';
 
-      // Generate image prompt and actual image for visual content
+      // Generate image prompt for visual content but don't create the image yet
       let imagePrompt = '';
-      let imageUrl = '';
       
       if (platform === 'instagram' || platform === 'facebook' || platform === 'linkedin' || type === 'ad') {
         const imageCompletion = await openai.chat.completions.create({
@@ -374,23 +373,6 @@ Please provide the updated press release content based on the user's instruction
           ],
         });
         imagePrompt = imageCompletion.choices[0].message.content || '';
-
-        // Generate actual image using DALL-E
-        if (imagePrompt) {
-          try {
-            const imageResponse = await openai.images.generate({
-              model: "dall-e-3",
-              prompt: imagePrompt,
-              n: 1,
-              size: "1024x1024",
-              quality: "standard",
-            });
-            imageUrl = imageResponse.data?.[0]?.url || '';
-          } catch (error) {
-            console.log('Image generation failed:', error);
-            // Continue without image if generation fails
-          }
-        }
       }
 
       const advertisement = await storage.createAdvertisement({
@@ -400,7 +382,7 @@ Please provide the updated press release content based on the user's instruction
         platform,
         type,
         imagePrompt: imagePrompt || undefined,
-        imageUrl: imageUrl || undefined,
+        imageUrl: undefined, // No image generated initially
       });
 
       res.json(advertisement);
@@ -488,6 +470,52 @@ Please provide the updated content based on the user's instruction. Keep it appr
   });
 
   // Regenerate image for advertisement
+  // Generate image for advertisement
+  app.post('/api/advertisements/:id/generate-image', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { imagePrompt } = req.body;
+      
+      const existingAd = await storage.getAdvertisementById(id);
+      if (!existingAd) {
+        return res.status(404).json({ error: 'Advertisement not found' });
+      }
+
+      const promptToUse = imagePrompt || existingAd.imagePrompt;
+      if (!promptToUse) {
+        return res.status(400).json({ error: 'No image prompt available' });
+      }
+
+      try {
+        const imageResponse = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: promptToUse,
+          n: 1,
+          size: "1024x1024",
+          quality: "standard",
+        });
+        
+        const imageUrl = imageResponse.data?.[0]?.url || '';
+        
+        if (imageUrl) {
+          const updatedAdvertisement = await storage.updateAdvertisement(id, { 
+            imageUrl,
+            imagePrompt: imagePrompt || existingAd.imagePrompt,
+            isCustomImage: false
+          });
+          res.json(updatedAdvertisement);
+        } else {
+          res.status(500).json({ error: 'Failed to generate image' });
+        }
+      } catch (error) {
+        console.log('Image generation failed:', error);
+        res.status(500).json({ error: 'Image generation failed' });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post('/api/advertisements/:id/regenerate-image', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
