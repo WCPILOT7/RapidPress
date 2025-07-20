@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Newspaper, FileText, Users, Send, Share2, Wand2, Eye, Trash2, Upload, Edit, Save, X, LogOut } from "lucide-react";
+import { useState } from "react";
+import { Newspaper, FileText, Users, Send, Share2, Wand2, Eye, Trash2, Upload, Edit, Save, X } from "lucide-react";
 import { Link } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -14,10 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
-import type { PressRelease, User } from "@shared/schema";
+import type { PressRelease } from "@shared/schema";
 
 const formSchema = z.object({
   company: z.string().min(1, "Company name is required"),
@@ -39,23 +37,7 @@ export default function Home() {
   const [editingRelease, setEditingRelease] = useState<PressRelease | null>(null);
   const [editInstruction, setEditInstruction] = useState("");
   const { toast } = useToast();
-  const { user, isLoading } = useAuth();
   const queryClient = useQueryClient();
-
-  // Redirect to login if unauthorized
-  useEffect(() => {
-    if (!isLoading && !user) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [user, isLoading, toast]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -86,17 +68,6 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/releases"] });
     },
     onError: (error: any) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
         description: error.message || "Failed to generate press release",
@@ -245,34 +216,10 @@ export default function Home() {
               </nav>
             </div>
             <div className="flex items-center space-x-4">
-              {user && (
-                <>
-                  <div className="text-sm text-gray-500">
-                    Welcome back, {(user as User).firstName || (user as User).email}
-                  </div>
-                  {(user as User).profileImageUrl ? (
-                    <img 
-                      src={(user as User).profileImageUrl!} 
-                      alt="Profile" 
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-                      <span className="text-white text-sm font-medium">
-                        {((user as User).firstName?.[0] || (user as User).email?.[0] || 'U').toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.location.href = '/api/logout'}
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
-                  </Button>
-                </>
-              )}
+              <div className="text-sm text-gray-500">Welcome back, Sarah</div>
+              <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                <span className="text-white text-sm font-medium">SC</span>
+              </div>
             </div>
           </div>
         </div>

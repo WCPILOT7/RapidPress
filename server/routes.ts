@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertPressReleaseSchema, insertContactSchema, insertAdvertisementSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
 import multer from "multer";
 import fs from "fs";
@@ -25,23 +24,9 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
+  
   // Generate press release
-  app.post('/api/generate', isAuthenticated, async (req, res) => {
+  app.post('/api/generate', async (req, res) => {
     try {
       const validatedData = insertPressReleaseSchema.parse(req.body);
       
@@ -100,9 +85,7 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
 
       const generatedRelease = completion.choices[0].message.content || '';
       
-      const userId = (req.user as any)?.claims?.sub;
-      console.log('Creating press release for user:', userId);
-      const pressRelease = await storage.createPressRelease(userId, {
+      const pressRelease = await storage.createPressRelease({
         ...validatedData,
         headline: generatedHeadline,
         release: generatedRelease,
@@ -115,10 +98,9 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   });
 
   // Get all press releases
-  app.get('/api/releases', isAuthenticated, async (req, res) => {
+  app.get('/api/releases', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
-      const releases = await storage.getPressReleases(userId);
+      const releases = await storage.getPressReleases();
       res.json(releases);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -126,11 +108,10 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   });
 
   // Get press release by ID
-  app.get('/api/releases/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/releases/:id', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
-      const release = await storage.getPressReleaseById(userId, id);
+      const release = await storage.getPressReleaseById(id);
       if (!release) {
         return res.status(404).json({ error: 'Press release not found' });
       }
@@ -141,18 +122,17 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   });
 
   // Update press release
-  app.put('/api/releases/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/releases/:id', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { release } = req.body;
       
-      const existingRelease = await storage.getPressReleaseById(userId, id);
+      const existingRelease = await storage.getPressReleaseById(id);
       if (!existingRelease) {
         return res.status(404).json({ error: 'Press release not found' });
       }
 
-      const updatedRelease = await storage.updatePressRelease(userId, id, { release });
+      const updatedRelease = await storage.updatePressRelease(id, { release });
       res.json(updatedRelease);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -160,13 +140,12 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   });
 
   // Edit press release with AI
-  app.post('/api/releases/:id/edit', isAuthenticated, async (req, res) => {
+  app.post('/api/releases/:id/edit', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { instruction, currentContent } = req.body;
       
-      const existingRelease = await storage.getPressReleaseById(userId, id);
+      const existingRelease = await storage.getPressReleaseById(id);
       if (!existingRelease) {
         return res.status(404).json({ error: 'Press release not found' });
       }
@@ -196,11 +175,10 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Delete press release
-  app.delete('/api/releases/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/releases/:id', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
-      await storage.deletePressRelease(userId, id);
+      await storage.deletePressRelease(id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -208,7 +186,7 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Upload contacts CSV
-  app.post('/api/contacts/upload', isAuthenticated, upload.single('file'), async (req, res) => {
+  app.post('/api/contacts/upload', upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -234,8 +212,7 @@ Please provide the updated press release content based on the user's instruction
               insertContactSchema.parse(contact)
             );
             
-            const userId = (req.user as any)?.claims?.sub;
-            const createdContacts = await storage.createContacts(userId, validatedContacts);
+            const createdContacts = await storage.createContacts(validatedContacts);
             
             // Clean up uploaded file
             fs.unlinkSync(filePath);
@@ -258,10 +235,9 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Get all contacts
-  app.get('/api/contacts', isAuthenticated, async (req, res) => {
+  app.get('/api/contacts', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
-      const contacts = await storage.getContacts(userId);
+      const contacts = await storage.getContacts();
       res.json(contacts);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -269,11 +245,10 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Delete contact
-  app.delete('/api/contacts/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/contacts/:id', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
-      await storage.deleteContact(userId, id);
+      await storage.deleteContact(id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -281,17 +256,16 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Send press release to contacts
-  app.post('/api/send-release', isAuthenticated, async (req, res) => {
+  app.post('/api/send-release', async (req, res) => {
     try {
       const { releaseId, recipientIds, subject, customMessage } = req.body;
       
-      const userId = (req.user as any)?.claims?.sub;
-      const release = await storage.getPressReleaseById(userId, releaseId);
+      const release = await storage.getPressReleaseById(releaseId);
       if (!release) {
         return res.status(404).json({ error: 'Press release not found' });
       }
 
-      let contacts = await storage.getContacts(userId);
+      let contacts = await storage.getContacts();
       
       // Filter contacts if specific recipients are selected
       if (recipientIds && recipientIds.length > 0) {
@@ -329,7 +303,7 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Create advertisement from press release
-  app.post('/api/advertisements', isAuthenticated, async (req, res) => {
+  app.post('/api/advertisements', async (req, res) => {
     try {
       const { pressReleaseId, platform, type } = req.body;
       
@@ -337,8 +311,7 @@ Please provide the updated press release content based on the user's instruction
         return res.status(400).json({ error: 'Missing required fields: pressReleaseId, platform, type' });
       }
       
-      const userId = (req.user as any)?.claims?.sub;
-      const release = await storage.getPressReleaseById(userId, pressReleaseId);
+      const release = await storage.getPressReleaseById(pressReleaseId);
       if (!release) {
         return res.status(404).json({ error: 'Press release not found' });
       }
@@ -402,7 +375,7 @@ Please provide the updated press release content based on the user's instruction
         imagePrompt = imageCompletion.choices[0].message.content || '';
       }
 
-      const advertisement = await storage.createAdvertisement(userId, {
+      const advertisement = await storage.createAdvertisement({
         pressReleaseId,
         title,
         content,
@@ -420,10 +393,9 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Get all advertisements
-  app.get('/api/advertisements', isAuthenticated, async (req, res) => {
+  app.get('/api/advertisements', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
-      const advertisements = await storage.getAdvertisements(userId);
+      const advertisements = await storage.getAdvertisements();
       res.json(advertisements);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -431,11 +403,10 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Get advertisements by press release ID
-  app.get('/api/advertisements/press-release/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/advertisements/press-release/:id', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const pressReleaseId = parseInt(req.params.id);
-      const advertisements = await storage.getAdvertisementsByPressReleaseId(userId, pressReleaseId);
+      const advertisements = await storage.getAdvertisementsByPressReleaseId(pressReleaseId);
       res.json(advertisements);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -443,18 +414,17 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Update advertisement
-  app.put('/api/advertisements/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/advertisements/:id', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { content, title } = req.body;
       
-      const existingAd = await storage.getAdvertisementById(userId, id);
+      const existingAd = await storage.getAdvertisementById(id);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
 
-      const updatedAdvertisement = await storage.updateAdvertisement(userId, id, { 
+      const updatedAdvertisement = await storage.updateAdvertisement(id, { 
         content: content || existingAd.content,
         title: title || existingAd.title 
       });
@@ -465,13 +435,12 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Edit advertisement with AI
-  app.post('/api/advertisements/:id/edit', isAuthenticated, async (req, res) => {
+  app.post('/api/advertisements/:id/edit', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { instruction, currentContent } = req.body;
       
-      const existingAd = await storage.getAdvertisementById(userId, id);
+      const existingAd = await storage.getAdvertisementById(id);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
@@ -502,13 +471,12 @@ Please provide the updated content based on the user's instruction. Keep it appr
 
   // Regenerate image for advertisement
   // Generate image for advertisement
-  app.post('/api/advertisements/:id/generate-image', isAuthenticated, async (req, res) => {
+  app.post('/api/advertisements/:id/generate-image', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { imagePrompt } = req.body;
       
-      const existingAd = await storage.getAdvertisementById(userId, id);
+      const existingAd = await storage.getAdvertisementById(id);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
@@ -530,7 +498,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
         const imageUrl = imageResponse.data?.[0]?.url || '';
         
         if (imageUrl) {
-          const updatedAdvertisement = await storage.updateAdvertisement(userId, id, { 
+          const updatedAdvertisement = await storage.updateAdvertisement(id, { 
             imageUrl,
             imagePrompt: imagePrompt || existingAd.imagePrompt,
             isCustomImage: false
@@ -548,13 +516,12 @@ Please provide the updated content based on the user's instruction. Keep it appr
     }
   });
 
-  app.post('/api/advertisements/:id/regenerate-image', isAuthenticated, async (req, res) => {
+  app.post('/api/advertisements/:id/regenerate-image', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       const { imagePrompt } = req.body;
       
-      const existingAd = await storage.getAdvertisementById(userId, id);
+      const existingAd = await storage.getAdvertisementById(id);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
@@ -576,7 +543,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
         const imageUrl = imageResponse.data?.[0]?.url || '';
         
         if (imageUrl) {
-          const updatedAdvertisement = await storage.updateAdvertisement(userId, id, { 
+          const updatedAdvertisement = await storage.updateAdvertisement(id, { 
             imageUrl,
             imagePrompt: imagePrompt || existingAd.imagePrompt,
             isCustomImage: false // Reset to AI-generated
@@ -595,12 +562,11 @@ Please provide the updated content based on the user's instruction. Keep it appr
   });
 
   // Upload custom image for advertisement
-  app.post('/api/advertisements/:id/upload-image', isAuthenticated, upload.single('image'), async (req, res) => {
+  app.post('/api/advertisements/:id/upload-image', upload.single('image'), async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
       
-      const existingAd = await storage.getAdvertisementById(userId, id);
+      const existingAd = await storage.getAdvertisementById(id);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
@@ -612,7 +578,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
       // Store the relative path for the uploaded image
       const imageUrl = `/uploads/${req.file.filename}`;
       
-      const updatedAdvertisement = await storage.updateAdvertisement(userId, id, { 
+      const updatedAdvertisement = await storage.updateAdvertisement(id, { 
         imageUrl,
         isCustomImage: true
       });
@@ -625,11 +591,10 @@ Please provide the updated content based on the user's instruction. Keep it appr
   });
 
   // Delete advertisement
-  app.delete('/api/advertisements/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/advertisements/:id', async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
       const id = parseInt(req.params.id);
-      await storage.deleteAdvertisement(userId, id);
+      await storage.deleteAdvertisement(id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
