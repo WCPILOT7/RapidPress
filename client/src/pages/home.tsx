@@ -1,8 +1,70 @@
 import { useState } from "react";
-import { Newspaper, FileText, Users, Send } from "lucide-react";
+import { Newspaper, FileText, Users, Send, Wand2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+
+const formSchema = z.object({
+  company: z.string().min(1, "Company name is required"),
+  headline: z.string().min(1, "Headline is required"),
+  copy: z.string().min(1, "Main copy is required"),
+  contact: z.string().min(1, "PR contact is required"),
+  quote: z.string().optional(),
+  competitors: z.string().optional(),
+});
+
+type FormData = z.infer<typeof formSchema>;
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("generate");
+  const [generatedRelease, setGeneratedRelease] = useState<any>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      company: "",
+      headline: "",
+      copy: "",
+      contact: "",
+      quote: "",
+      competitors: "",
+    },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      const response = await apiRequest('POST', '/api/generate', data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setGeneratedRelease(data);
+      toast({
+        title: "Success",
+        description: "Press release generated successfully!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate press release",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: FormData) => {
+    generateMutation.mutate(data);
+  };
 
   const navItems = [
     { id: "generate", label: "Generate", icon: Newspaper },
@@ -55,9 +117,155 @@ export default function Home() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeSection === "generate" && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Generate Press Release</h2>
-            <p className="text-gray-600">Press release generation feature coming soon</p>
+          <div>
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Generate Press Release</h2>
+              <p className="text-gray-600">Create professional press releases powered by AI in minutes</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card>
+                <CardContent className="p-6">
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      <div className="grid grid-cols-1 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="company"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Company Name *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter your company name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="contact"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>PR Contact *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Contact person for media inquiries" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="headline"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Headline *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Compelling headline for your press release" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="copy"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Main Copy *</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                rows={4}
+                                placeholder="Describe the key information, announcement, or story..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="quote"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Executive Quote</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                rows={3}
+                                placeholder="Quote from company executive or spokesperson..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="competitors"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Competitor Information</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                rows={2}
+                                placeholder="Any competitive context or market positioning..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={generateMutation.isPending}
+                      >
+                        <Wand2 className="w-4 h-4 mr-2" />
+                        {generateMutation.isPending ? "Generating..." : "Generate Press Release"}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Generated Press Release</h3>
+                  {generatedRelease ? (
+                    <div className="space-y-4">
+                      <div className="prose prose-sm max-w-none">
+                        <pre className="whitespace-pre-wrap text-sm">{generatedRelease.release}</pre>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedRelease.release);
+                          toast({ title: "Copied", description: "Press release copied to clipboard" });
+                        }}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Copy to Clipboard
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <Wand2 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>Fill out the form and click "Generate Press Release" to create your content</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
         {activeSection === "history" && (
