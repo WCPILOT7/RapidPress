@@ -11,6 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import PressReleaseEditor from "@/components/press-release-editor";
+import type { PressRelease } from "@shared/schema";
 
 const formSchema = z.object({
   company: z.string().min(1, "Company name is required"),
@@ -24,7 +26,8 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 export default function GenerateSection() {
-  const [generatedRelease, setGeneratedRelease] = useState<any>(null);
+  const [generatedRelease, setGeneratedRelease] = useState<PressRelease | null>(null);
+  const [editingRelease, setEditingRelease] = useState<PressRelease | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -71,6 +74,21 @@ export default function GenerateSection() {
         description: "Press release copied to clipboard",
       });
     }
+  };
+
+  const handleEdit = () => {
+    if (generatedRelease) {
+      setEditingRelease(generatedRelease);
+    }
+  };
+
+  const handleCloseEditor = () => {
+    setEditingRelease(null);
+  };
+
+  const handleSaveEditor = (updatedRelease: PressRelease) => {
+    setGeneratedRelease(updatedRelease);
+    setEditingRelease(null);
   };
 
   return (
@@ -220,7 +238,7 @@ export default function GenerateSection() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Generated Press Release</h3>
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleEdit}>
                     <Edit className="w-4 h-4 mr-2" />
                     Edit
                   </Button>
@@ -246,6 +264,15 @@ export default function GenerateSection() {
           )}
         </CardContent>
       </Card>
+
+      {/* Press Release Editor Modal */}
+      {editingRelease && (
+        <PressReleaseEditor
+          pressRelease={editingRelease}
+          onClose={handleCloseEditor}
+          onSave={handleSaveEditor}
+        />
+      )}
     </section>
   );
 }
