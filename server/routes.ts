@@ -1,12 +1,22 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPressReleaseSchema, insertContactSchema, insertAdvertisementSchema } from "@shared/schema";
+import { insertPressReleaseSchema, insertContactSchema, insertAdvertisementSchema, insertUserSchema, loginSchema } from "@shared/schema";
 import OpenAI from "openai";
 import multer from "multer";
 import fs from "fs";
 import csvParser from "csv-parser";
 import nodemailer from "nodemailer";
+import bcrypt from "bcryptjs";
+import session from "express-session";
+import ConnectPgSimple from "connect-pg-simple";
+
+// Extend session data
+declare module "express-session" {
+  interface SessionData {
+    userId?: number;
+  }
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -23,12 +33,134 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Session configuration
+const PgSession = ConnectPgSimple(session);
+
+// Authentication middleware
+interface AuthenticatedRequest extends Request {
+  user?: { id: number; email: string; name: string };
+}
+
+const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  next();
+};
+
+const attachUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (req.session?.userId) {
+    const user = await storage.getUserById(req.session.userId);
+    if (user) {
+      req.user = { id: user.id, email: user.email, name: user.name };
+    }
+  }
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup session middleware
+  app.use(session({
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      tableName: 'session',
+    }),
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    },
+  }));
+
+  // Apply user attachment middleware to all routes
+  app.use(attachUser);
+
+  // Authentication routes
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const validatedData = insertUserSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(validatedData.email);
+      if (existingUser) {
+        return res.status(409).json({ error: 'Email already registered' });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(validatedData.password, 12);
+      
+      // Create user
+      const user = await storage.createUser({
+        ...validatedData,
+        password: hashedPassword,
+      });
+
+      // Create session
+      req.session.userId = user.id;
+      
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(400).json({ error: 'Registration failed' });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const validatedData = loginSchema.parse(req.body);
+      
+      // Find user
+      const user = await storage.getUserByEmail(validatedData.email);
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // Check password
+      const isValidPassword = await bcrypt.compare(validatedData.password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // Create session
+      req.session.userId = user.id;
+      
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(400).json({ error: 'Login failed' });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Logout failed' });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: 'Logged out successfully' });
+    });
+  });
+
+  app.get('/api/auth/me', requireAuth, async (req: AuthenticatedRequest, res) => {
+    if (req.user) {
+      res.json({ user: req.user });
+    } else {
+      res.status(401).json({ error: 'Not authenticated' });
+    }
+  });
   
   // Generate press release
-  app.post('/api/generate', async (req, res) => {
+  app.post('/api/generate', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const validatedData = insertPressReleaseSchema.parse(req.body);
+      const userId = req.user!.id;
       
       // First, generate a compelling headline
       const headlinePrompt = `Generate a compelling, professional press release headline for the following:
@@ -85,7 +217,7 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
 
       const generatedRelease = completion.choices[0].message.content || '';
       
-      const pressRelease = await storage.createPressRelease({
+      const pressRelease = await storage.createPressRelease(userId, {
         ...validatedData,
         headline: generatedHeadline,
         release: generatedRelease,
@@ -98,9 +230,10 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   });
 
   // Get all press releases
-  app.get('/api/releases', async (req, res) => {
+  app.get('/api/releases', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const releases = await storage.getPressReleases();
+      const userId = req.user!.id;
+      const releases = await storage.getPressReleases(userId);
       res.json(releases);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -108,10 +241,11 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   });
 
   // Get press release by ID
-  app.get('/api/releases/:id', async (req, res) => {
+  app.get('/api/releases/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const release = await storage.getPressReleaseById(id);
+      const userId = req.user!.id;
+      const release = await storage.getPressReleaseById(id, userId);
       if (!release) {
         return res.status(404).json({ error: 'Press release not found' });
       }
@@ -122,17 +256,18 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   });
 
   // Update press release
-  app.put('/api/releases/:id', async (req, res) => {
+  app.put('/api/releases/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user!.id;
       const { release } = req.body;
       
-      const existingRelease = await storage.getPressReleaseById(id);
+      const existingRelease = await storage.getPressReleaseById(id, userId);
       if (!existingRelease) {
         return res.status(404).json({ error: 'Press release not found' });
       }
 
-      const updatedRelease = await storage.updatePressRelease(id, { release });
+      const updatedRelease = await storage.updatePressRelease(id, userId, { release });
       res.json(updatedRelease);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -140,12 +275,13 @@ Structure it with the provided headline, subheadline, main body, quote, and boil
   });
 
   // Edit press release with AI
-  app.post('/api/releases/:id/edit', async (req, res) => {
+  app.post('/api/releases/:id/edit', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user!.id;
       const { instruction, currentContent } = req.body;
       
-      const existingRelease = await storage.getPressReleaseById(id);
+      const existingRelease = await storage.getPressReleaseById(id, userId);
       if (!existingRelease) {
         return res.status(404).json({ error: 'Press release not found' });
       }
@@ -175,10 +311,11 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Delete press release
-  app.delete('/api/releases/:id', async (req, res) => {
+  app.delete('/api/releases/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      await storage.deletePressRelease(id);
+      const userId = req.user!.id;
+      await storage.deletePressRelease(id, userId);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -186,7 +323,7 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Upload contacts CSV
-  app.post('/api/contacts/upload', upload.single('file'), async (req, res) => {
+  app.post('/api/contacts/upload', requireAuth, upload.single('file'), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -212,7 +349,8 @@ Please provide the updated press release content based on the user's instruction
               insertContactSchema.parse(contact)
             );
             
-            const createdContacts = await storage.createContacts(validatedContacts);
+            const userId = req.user!.id;
+            const createdContacts = await storage.createContacts(userId, validatedContacts);
             
             // Clean up uploaded file
             fs.unlinkSync(filePath);
@@ -235,9 +373,10 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Get all contacts
-  app.get('/api/contacts', async (req, res) => {
+  app.get('/api/contacts', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const contacts = await storage.getContacts();
+      const userId = req.user!.id;
+      const contacts = await storage.getContacts(userId);
       res.json(contacts);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -245,10 +384,11 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Delete contact
-  app.delete('/api/contacts/:id', async (req, res) => {
+  app.delete('/api/contacts/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      await storage.deleteContact(id);
+      const userId = req.user!.id;
+      await storage.deleteContact(id, userId);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -256,16 +396,17 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Send press release to contacts
-  app.post('/api/send-release', async (req, res) => {
+  app.post('/api/send-release', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { releaseId, recipientIds, subject, customMessage } = req.body;
+      const userId = req.user!.id;
       
-      const release = await storage.getPressReleaseById(releaseId);
+      const release = await storage.getPressReleaseById(releaseId, userId);
       if (!release) {
         return res.status(404).json({ error: 'Press release not found' });
       }
 
-      let contacts = await storage.getContacts();
+      let contacts = await storage.getContacts(userId);
       
       // Filter contacts if specific recipients are selected
       if (recipientIds && recipientIds.length > 0) {
@@ -303,15 +444,16 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Create advertisement from press release
-  app.post('/api/advertisements', async (req, res) => {
+  app.post('/api/advertisements', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { pressReleaseId, platform, type } = req.body;
+      const userId = req.user!.id;
       
       if (!pressReleaseId || !platform || !type) {
         return res.status(400).json({ error: 'Missing required fields: pressReleaseId, platform, type' });
       }
       
-      const release = await storage.getPressReleaseById(pressReleaseId);
+      const release = await storage.getPressReleaseById(pressReleaseId, userId);
       if (!release) {
         return res.status(404).json({ error: 'Press release not found' });
       }
@@ -375,7 +517,7 @@ Please provide the updated press release content based on the user's instruction
         imagePrompt = imageCompletion.choices[0].message.content || '';
       }
 
-      const advertisement = await storage.createAdvertisement({
+      const advertisement = await storage.createAdvertisement(userId, {
         pressReleaseId,
         title,
         content,
@@ -393,9 +535,10 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Get all advertisements
-  app.get('/api/advertisements', async (req, res) => {
+  app.get('/api/advertisements', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const advertisements = await storage.getAdvertisements();
+      const userId = req.user!.id;
+      const advertisements = await storage.getAdvertisements(userId);
       res.json(advertisements);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -403,10 +546,11 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Get advertisements by press release ID
-  app.get('/api/advertisements/press-release/:id', async (req, res) => {
+  app.get('/api/advertisements/press-release/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const pressReleaseId = parseInt(req.params.id);
-      const advertisements = await storage.getAdvertisementsByPressReleaseId(pressReleaseId);
+      const userId = req.user!.id;
+      const advertisements = await storage.getAdvertisementsByPressReleaseId(pressReleaseId, userId);
       res.json(advertisements);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -414,17 +558,18 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Update advertisement
-  app.put('/api/advertisements/:id', async (req, res) => {
+  app.put('/api/advertisements/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user!.id;
       const { content, title } = req.body;
       
-      const existingAd = await storage.getAdvertisementById(id);
+      const existingAd = await storage.getAdvertisementById(id, userId);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
 
-      const updatedAdvertisement = await storage.updateAdvertisement(id, { 
+      const updatedAdvertisement = await storage.updateAdvertisement(id, userId, { 
         content: content || existingAd.content,
         title: title || existingAd.title 
       });
@@ -435,12 +580,13 @@ Please provide the updated press release content based on the user's instruction
   });
 
   // Edit advertisement with AI
-  app.post('/api/advertisements/:id/edit', async (req, res) => {
+  app.post('/api/advertisements/:id/edit', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user!.id;
       const { instruction, currentContent } = req.body;
       
-      const existingAd = await storage.getAdvertisementById(id);
+      const existingAd = await storage.getAdvertisementById(id, userId);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
@@ -471,12 +617,13 @@ Please provide the updated content based on the user's instruction. Keep it appr
 
   // Regenerate image for advertisement
   // Generate image for advertisement
-  app.post('/api/advertisements/:id/generate-image', async (req, res) => {
+  app.post('/api/advertisements/:id/generate-image', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user!.id;
       const { imagePrompt } = req.body;
       
-      const existingAd = await storage.getAdvertisementById(id);
+      const existingAd = await storage.getAdvertisementById(id, userId);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
@@ -498,7 +645,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
         const imageUrl = imageResponse.data?.[0]?.url || '';
         
         if (imageUrl) {
-          const updatedAdvertisement = await storage.updateAdvertisement(id, { 
+          const updatedAdvertisement = await storage.updateAdvertisement(id, userId, { 
             imageUrl,
             imagePrompt: imagePrompt || existingAd.imagePrompt,
             isCustomImage: false
@@ -516,12 +663,13 @@ Please provide the updated content based on the user's instruction. Keep it appr
     }
   });
 
-  app.post('/api/advertisements/:id/regenerate-image', async (req, res) => {
+  app.post('/api/advertisements/:id/regenerate-image', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user!.id;
       const { imagePrompt } = req.body;
       
-      const existingAd = await storage.getAdvertisementById(id);
+      const existingAd = await storage.getAdvertisementById(id, userId);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
@@ -543,7 +691,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
         const imageUrl = imageResponse.data?.[0]?.url || '';
         
         if (imageUrl) {
-          const updatedAdvertisement = await storage.updateAdvertisement(id, { 
+          const updatedAdvertisement = await storage.updateAdvertisement(id, userId, { 
             imageUrl,
             imagePrompt: imagePrompt || existingAd.imagePrompt,
             isCustomImage: false // Reset to AI-generated
@@ -562,11 +710,12 @@ Please provide the updated content based on the user's instruction. Keep it appr
   });
 
   // Upload custom image for advertisement
-  app.post('/api/advertisements/:id/upload-image', upload.single('image'), async (req, res) => {
+  app.post('/api/advertisements/:id/upload-image', requireAuth, upload.single('image'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user!.id;
       
-      const existingAd = await storage.getAdvertisementById(id);
+      const existingAd = await storage.getAdvertisementById(id, userId);
       if (!existingAd) {
         return res.status(404).json({ error: 'Advertisement not found' });
       }
@@ -578,7 +727,7 @@ Please provide the updated content based on the user's instruction. Keep it appr
       // Store the relative path for the uploaded image
       const imageUrl = `/uploads/${req.file.filename}`;
       
-      const updatedAdvertisement = await storage.updateAdvertisement(id, { 
+      const updatedAdvertisement = await storage.updateAdvertisement(id, userId, { 
         imageUrl,
         isCustomImage: true
       });
@@ -591,10 +740,11 @@ Please provide the updated content based on the user's instruction. Keep it appr
   });
 
   // Delete advertisement
-  app.delete('/api/advertisements/:id', async (req, res) => {
+  app.delete('/api/advertisements/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      await storage.deleteAdvertisement(id);
+      const userId = req.user!.id;
+      await storage.deleteAdvertisement(id, userId);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

@@ -1,36 +1,62 @@
-import { pressReleases, contacts, advertisements, type PressRelease, type InsertPressRelease, type Contact, type InsertContact, type Advertisement, type InsertAdvertisement } from "@shared/schema";
+import { users, pressReleases, contacts, advertisements, type User, type InsertUser, type PressRelease, type InsertPressRelease, type Contact, type InsertContact, type Advertisement, type InsertAdvertisement } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
+  // User methods
+  createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserById(id: number): Promise<User | undefined>;
+  
   // Press Release methods
-  createPressRelease(pressRelease: InsertPressRelease & { headline: string; release: string }): Promise<PressRelease>;
-  getPressReleases(): Promise<PressRelease[]>;
-  getPressReleaseById(id: number): Promise<PressRelease | undefined>;
-  updatePressRelease(id: number, updates: Partial<PressRelease>): Promise<PressRelease>;
-  deletePressRelease(id: number): Promise<void>;
+  createPressRelease(userId: number, pressRelease: InsertPressRelease & { headline: string; release: string }): Promise<PressRelease>;
+  getPressReleases(userId: number): Promise<PressRelease[]>;
+  getPressReleaseById(id: number, userId: number): Promise<PressRelease | undefined>;
+  updatePressRelease(id: number, userId: number, updates: Partial<PressRelease>): Promise<PressRelease>;
+  deletePressRelease(id: number, userId: number): Promise<void>;
   
   // Contact methods
-  createContact(contact: InsertContact): Promise<Contact>;
-  createContacts(contacts: InsertContact[]): Promise<Contact[]>;
-  getContacts(): Promise<Contact[]>;
-  deleteContact(id: number): Promise<void>;
+  createContact(userId: number, contact: InsertContact): Promise<Contact>;
+  createContacts(userId: number, contacts: InsertContact[]): Promise<Contact[]>;
+  getContacts(userId: number): Promise<Contact[]>;
+  deleteContact(id: number, userId: number): Promise<void>;
   
   // Advertisement methods
-  createAdvertisement(advertisement: InsertAdvertisement): Promise<Advertisement>;
-  getAdvertisements(): Promise<Advertisement[]>;
-  getAdvertisementsByPressReleaseId(pressReleaseId: number): Promise<Advertisement[]>;
-  getAdvertisementById(id: number): Promise<Advertisement | undefined>;
-  updateAdvertisement(id: number, updates: Partial<Advertisement>): Promise<Advertisement>;
-  deleteAdvertisement(id: number): Promise<void>;
+  createAdvertisement(userId: number, advertisement: InsertAdvertisement): Promise<Advertisement>;
+  getAdvertisements(userId: number): Promise<Advertisement[]>;
+  getAdvertisementsByPressReleaseId(pressReleaseId: number, userId: number): Promise<Advertisement[]>;
+  getAdvertisementById(id: number, userId: number): Promise<Advertisement | undefined>;
+  updateAdvertisement(id: number, userId: number, updates: Partial<Advertisement>): Promise<Advertisement>;
+  deleteAdvertisement(id: number, userId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async createPressRelease(data: InsertPressRelease & { headline: string; release: string }): Promise<PressRelease> {
+  // User methods
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db
+      .insert(users)
+      .values(user)
+      .returning();
+    return newUser;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async getUserById(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  // Press Release methods
+  async createPressRelease(userId: number, data: InsertPressRelease & { headline: string; release: string }): Promise<PressRelease> {
     const [pressRelease] = await db
       .insert(pressReleases)
       .values({
         ...data,
+        userId,
         quote: data.quote || null,
         competitors: data.competitors || null,
       })
@@ -38,21 +64,28 @@ export class DatabaseStorage implements IStorage {
     return pressRelease;
   }
 
-  async getPressReleases(): Promise<PressRelease[]> {
-    const results = await db.select().from(pressReleases).orderBy(pressReleases.createdAt);
+  async getPressReleases(userId: number): Promise<PressRelease[]> {
+    const results = await db
+      .select()
+      .from(pressReleases)
+      .where(eq(pressReleases.userId, userId))
+      .orderBy(pressReleases.createdAt);
     return results.reverse(); // Newest first
   }
 
-  async getPressReleaseById(id: number): Promise<PressRelease | undefined> {
-    const [pressRelease] = await db.select().from(pressReleases).where(eq(pressReleases.id, id));
+  async getPressReleaseById(id: number, userId: number): Promise<PressRelease | undefined> {
+    const [pressRelease] = await db
+      .select()
+      .from(pressReleases)
+      .where(and(eq(pressReleases.id, id), eq(pressReleases.userId, userId)));
     return pressRelease || undefined;
   }
 
-  async updatePressRelease(id: number, updates: Partial<PressRelease>): Promise<PressRelease> {
+  async updatePressRelease(id: number, userId: number, updates: Partial<PressRelease>): Promise<PressRelease> {
     const [updatedRelease] = await db
       .update(pressReleases)
       .set(updates)
-      .where(eq(pressReleases.id, id))
+      .where(and(eq(pressReleases.id, id), eq(pressReleases.userId, userId)))
       .returning();
     
     if (!updatedRelease) {
@@ -62,40 +95,52 @@ export class DatabaseStorage implements IStorage {
     return updatedRelease;
   }
 
-  async deletePressRelease(id: number): Promise<void> {
-    await db.delete(pressReleases).where(eq(pressReleases.id, id));
+  async deletePressRelease(id: number, userId: number): Promise<void> {
+    await db
+      .delete(pressReleases)
+      .where(and(eq(pressReleases.id, id), eq(pressReleases.userId, userId)));
   }
 
-  async createContact(contact: InsertContact): Promise<Contact> {
+  // Contact methods
+  async createContact(userId: number, contact: InsertContact): Promise<Contact> {
     const [newContact] = await db
       .insert(contacts)
-      .values(contact)
+      .values({ ...contact, userId })
       .returning();
     return newContact;
   }
 
-  async createContacts(contactsData: InsertContact[]): Promise<Contact[]> {
+  async createContacts(userId: number, contactsData: InsertContact[]): Promise<Contact[]> {
+    const contactsWithUserId = contactsData.map(contact => ({ ...contact, userId }));
     const results = await db
       .insert(contacts)
-      .values(contactsData)
+      .values(contactsWithUserId)
       .returning();
     return results;
   }
 
-  async getContacts(): Promise<Contact[]> {
-    const results = await db.select().from(contacts).orderBy(contacts.createdAt);
+  async getContacts(userId: number): Promise<Contact[]> {
+    const results = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.userId, userId))
+      .orderBy(contacts.createdAt);
     return results.reverse(); // Newest first
   }
 
-  async deleteContact(id: number): Promise<void> {
-    await db.delete(contacts).where(eq(contacts.id, id));
+  async deleteContact(id: number, userId: number): Promise<void> {
+    await db
+      .delete(contacts)
+      .where(and(eq(contacts.id, id), eq(contacts.userId, userId)));
   }
 
-  async createAdvertisement(advertisement: InsertAdvertisement): Promise<Advertisement> {
+  // Advertisement methods
+  async createAdvertisement(userId: number, advertisement: InsertAdvertisement): Promise<Advertisement> {
     const [newAdvertisement] = await db
       .insert(advertisements)
       .values({
         ...advertisement,
+        userId,
         imagePrompt: advertisement.imagePrompt || null,
         imageUrl: advertisement.imageUrl || null,
       })
@@ -103,30 +148,37 @@ export class DatabaseStorage implements IStorage {
     return newAdvertisement;
   }
 
-  async getAdvertisements(): Promise<Advertisement[]> {
-    const results = await db.select().from(advertisements).orderBy(advertisements.createdAt);
-    return results.reverse(); // Newest first
-  }
-
-  async getAdvertisementsByPressReleaseId(pressReleaseId: number): Promise<Advertisement[]> {
+  async getAdvertisements(userId: number): Promise<Advertisement[]> {
     const results = await db
       .select()
       .from(advertisements)
-      .where(eq(advertisements.pressReleaseId, pressReleaseId))
+      .where(eq(advertisements.userId, userId))
       .orderBy(advertisements.createdAt);
     return results.reverse(); // Newest first
   }
 
-  async getAdvertisementById(id: number): Promise<Advertisement | undefined> {
-    const [advertisement] = await db.select().from(advertisements).where(eq(advertisements.id, id));
+  async getAdvertisementsByPressReleaseId(pressReleaseId: number, userId: number): Promise<Advertisement[]> {
+    const results = await db
+      .select()
+      .from(advertisements)
+      .where(and(eq(advertisements.pressReleaseId, pressReleaseId), eq(advertisements.userId, userId)))
+      .orderBy(advertisements.createdAt);
+    return results.reverse(); // Newest first
+  }
+
+  async getAdvertisementById(id: number, userId: number): Promise<Advertisement | undefined> {
+    const [advertisement] = await db
+      .select()
+      .from(advertisements)
+      .where(and(eq(advertisements.id, id), eq(advertisements.userId, userId)));
     return advertisement || undefined;
   }
 
-  async updateAdvertisement(id: number, updates: Partial<Advertisement>): Promise<Advertisement> {
+  async updateAdvertisement(id: number, userId: number, updates: Partial<Advertisement>): Promise<Advertisement> {
     const [updatedAdvertisement] = await db
       .update(advertisements)
       .set(updates)
-      .where(eq(advertisements.id, id))
+      .where(and(eq(advertisements.id, id), eq(advertisements.userId, userId)))
       .returning();
     
     if (!updatedAdvertisement) {
@@ -136,8 +188,10 @@ export class DatabaseStorage implements IStorage {
     return updatedAdvertisement;
   }
 
-  async deleteAdvertisement(id: number): Promise<void> {
-    await db.delete(advertisements).where(eq(advertisements.id, id));
+  async deleteAdvertisement(id: number, userId: number): Promise<void> {
+    await db
+      .delete(advertisements)
+      .where(and(eq(advertisements.id, id), eq(advertisements.userId, userId)));
   }
 }
 

@@ -2,8 +2,17 @@ import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const pressReleases = pgTable("press_releases", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
   company: text("company").notNull(),
   headline: text("headline").notNull(),
   copy: text("copy").notNull(),
@@ -20,6 +29,7 @@ export const pressReleases = pgTable("press_releases", {
 
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
   publication: text("publication").notNull(),
@@ -28,6 +38,7 @@ export const contacts = pgTable("contacts", {
 
 export const advertisements = pgTable("advertisements", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
   pressReleaseId: integer("press_release_id").notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
@@ -39,8 +50,16 @@ export const advertisements = pgTable("advertisements", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const loginSchema = insertUserSchema.omit({ name: true });
+
 export const insertPressReleaseSchema = createInsertSchema(pressReleases).omit({
   id: true,
+  userId: true,
   headline: true,
   release: true,
   createdAt: true,
@@ -48,14 +67,19 @@ export const insertPressReleaseSchema = createInsertSchema(pressReleases).omit({
 
 export const insertContactSchema = createInsertSchema(contacts).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
 export const insertAdvertisementSchema = createInsertSchema(advertisements).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type LoginData = z.infer<typeof loginSchema>;
 export type InsertPressRelease = z.infer<typeof insertPressReleaseSchema>;
 export type PressRelease = typeof pressReleases.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
