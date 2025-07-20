@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Newspaper, FileText, Users, Send, Share2, Wand2, Eye, Trash2, Upload, Edit, Save, X, ChevronRight, ChevronLeft, Building, User, Calendar, Palette, FileText as FileTextIcon, Quote, Trophy, Languages } from "lucide-react";
 import { Link } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -32,6 +32,70 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+// Move languages array outside component to avoid recreation on every render
+const TRANSLATION_LANGUAGES = [
+  { code: "Spanish", name: "Spanish" },
+  { code: "French", name: "French" },
+  { code: "German", name: "German" },
+  { code: "Italian", name: "Italian" },
+  { code: "Portuguese", name: "Portuguese" },
+  { code: "Chinese", name: "Chinese (Simplified)" },
+  { code: "Japanese", name: "Japanese" },
+  { code: "Korean", name: "Korean" },
+  { code: "Arabic", name: "Arabic" },
+  { code: "Russian", name: "Russian" },
+  { code: "Dutch", name: "Dutch" },
+  { code: "Swedish", name: "Swedish" },
+  { code: "Norwegian", name: "Norwegian" },
+  { code: "Danish", name: "Danish" },
+  { code: "Finnish", name: "Finnish" },
+  // Indian Regional Languages
+  { code: "Hindi", name: "Hindi (हिंदी)" },
+  { code: "Bengali", name: "Bengali (বাংলা)" },
+  { code: "Telugu", name: "Telugu (తెలుగు)" },
+  { code: "Marathi", name: "Marathi (मराठी)" },
+  { code: "Tamil", name: "Tamil (தமிழ்)" },
+  { code: "Gujarati", name: "Gujarati (ગુજરાતી)" },
+  { code: "Urdu", name: "Urdu (اردو)" },
+  { code: "Kannada", name: "Kannada (ಕನ್ನಡ)" },
+  { code: "Odia", name: "Odia (ଓଡ଼ିଆ)" },
+  { code: "Malayalam", name: "Malayalam (മലയാളം)" },
+  { code: "Punjabi", name: "Punjabi (ਪੰਜਾਬੀ)" },
+  { code: "Assamese", name: "Assamese (অসমীয়া)" },
+];
+
+// Define form steps outside component to avoid recreation
+const FORM_STEPS = [
+  {
+    id: 0,
+    title: "Company Info",
+    description: "Basic company details",
+    icon: Building,
+    fields: ["company", "contact", "contactEmail", "contactPhone", "date"]
+  },
+  {
+    id: 1,
+    title: "Brand Voice", 
+    description: "Tone and guidelines",
+    icon: Palette,
+    fields: ["brandTone"]
+  },
+  {
+    id: 2,
+    title: "Content",
+    description: "Main story and details", 
+    icon: FileTextIcon,
+    fields: ["copy"]
+  },
+  {
+    id: 3,
+    title: "Quotes & Context",
+    description: "Executive quotes and competition",
+    icon: Quote,
+    fields: ["quote", "competitors"]
+  }
+];
+
 export default function Home() {
   const [activeSection, setActiveSection] = useState("generate");
   const [generatedRelease, setGeneratedRelease] = useState<any>(null);
@@ -42,37 +106,7 @@ export default function Home() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Define the steps for the wizard
-  const formSteps = [
-    {
-      id: 0,
-      title: "Company Info",
-      description: "Basic company details",
-      icon: Building,
-      fields: ["company", "contact", "contactEmail", "contactPhone", "date"]
-    },
-    {
-      id: 1,
-      title: "Brand Voice",
-      description: "Tone and guidelines",
-      icon: Palette,
-      fields: ["brandTone"]
-    },
-    {
-      id: 2,
-      title: "Content",
-      description: "Main story and details",
-      icon: FileTextIcon,
-      fields: ["copy"]
-    },
-    {
-      id: 3,
-      title: "Quotes & Context",
-      description: "Executive quotes and competition",
-      icon: Quote,
-      fields: ["quote", "competitors"]
-    }
-  ];
+
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -161,7 +195,7 @@ export default function Home() {
 
   const onSubmit = (data: FormData) => {
     // Only submit if we're on the final step
-    if (currentStep === formSteps.length - 1) {
+    if (currentStep === FORM_STEPS.length - 1) {
       try {
         generateMutation.mutate(data);
       } catch (error) {
@@ -176,7 +210,7 @@ export default function Home() {
   };
 
   const handleGenerateClick = () => {
-    if (currentStep === formSteps.length - 1 && isStepValid(currentStep)) {
+    if (currentStep === FORM_STEPS.length - 1 && isStepValid(currentStep)) {
       form.handleSubmit(onSubmit)();
     }
   };
@@ -204,49 +238,28 @@ export default function Home() {
     },
   });
 
-  // Common languages for translation
-  const languages = [
-    { code: "Spanish", name: "Spanish" },
-    { code: "French", name: "French" },
-    { code: "German", name: "German" },
-    { code: "Italian", name: "Italian" },
-    { code: "Portuguese", name: "Portuguese" },
-    { code: "Chinese", name: "Chinese (Simplified)" },
-    { code: "Japanese", name: "Japanese" },
-    { code: "Korean", name: "Korean" },
-    { code: "Arabic", name: "Arabic" },
-    { code: "Russian", name: "Russian" },
-    { code: "Dutch", name: "Dutch" },
-    { code: "Swedish", name: "Swedish" },
-    { code: "Norwegian", name: "Norwegian" },
-    { code: "Danish", name: "Danish" },
-    { code: "Finnish", name: "Finnish" },
-    // Indian Regional Languages
-    { code: "Hindi", name: "Hindi (हिंदी)" },
-    { code: "Bengali", name: "Bengali (বাংলা)" },
-    { code: "Telugu", name: "Telugu (తెలుగు)" },
-    { code: "Marathi", name: "Marathi (मराठी)" },
-    { code: "Tamil", name: "Tamil (தமிழ்)" },
-    { code: "Gujarati", name: "Gujarati (ગુજરાતી)" },
-    { code: "Urdu", name: "Urdu (اردو)" },
-    { code: "Kannada", name: "Kannada (ಕನ್ನಡ)" },
-    { code: "Odia", name: "Odia (ଓଡ଼ିଆ)" },
-    { code: "Malayalam", name: "Malayalam (മലയാളം)" },
-    { code: "Punjabi", name: "Punjabi (ਪੰਜਾਬੀ)" },
-    { code: "Assamese", name: "Assamese (অসমীয়া)" },
-  ];
+  // Lazy load data only when needed for each section
+  const { data: releases = [], isLoading: releasesLoading } = useQuery({
+    queryKey: ["/api/releases"],
+    enabled: activeSection === "history", // Only fetch when viewing history
+  });
+
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["/api/contacts"], 
+    enabled: activeSection === "contacts" || activeSection === "distribute", // Only fetch when needed
+  });
 
   // Helper functions for step navigation
   const isStepValid = (stepIndex: number) => {
     try {
-      const step = formSteps[stepIndex];
+      const step = FORM_STEPS[stepIndex];
       if (!step) return false;
       
-      const requiredFields = step.fields.filter(field => 
+      const requiredFields = step.fields.filter((field: string) => 
         ["company", "copy", "contact", "contactEmail", "contactPhone", "date"].includes(field)
       );
       
-      return requiredFields.every(field => {
+      return requiredFields.every((field: string) => {
         try {
           const value = form.getValues(field as keyof FormData);
           return value && typeof value === 'string' && value.trim() !== "";
@@ -263,7 +276,7 @@ export default function Home() {
 
   const goToNextStep = () => {
     try {
-      if (currentStep < formSteps.length - 1 && isStepValid(currentStep)) {
+      if (currentStep < FORM_STEPS.length - 1 && isStepValid(currentStep)) {
         setCurrentStep(currentStep + 1);
       }
     } catch (error) {
@@ -288,7 +301,7 @@ export default function Home() {
 
   const goToStep = (stepIndex: number) => {
     try {
-      if (stepIndex >= 0 && stepIndex < formSteps.length) {
+      if (stepIndex >= 0 && stepIndex < FORM_STEPS.length) {
         setCurrentStep(stepIndex);
       }
     } catch (error) {
@@ -296,10 +309,7 @@ export default function Home() {
     }
   };
 
-  // History functionality
-  const { data: releases = [], isLoading: releasesLoading } = useQuery<PressRelease[]>({
-    queryKey: ["/api/releases"],
-  });
+
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -407,21 +417,21 @@ export default function Home() {
                   {/* Step Progress Bar */}
                   <div className="bg-gray-50 px-6 py-4 border-b">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Step {currentStep + 1} of {formSteps.length}</h3>
-                      <div className="text-sm text-gray-500">{Math.round(((currentStep + 1) / formSteps.length) * 100)}% Complete</div>
+                      <h3 className="text-lg font-semibold text-gray-900">Step {currentStep + 1} of {FORM_STEPS.length}</h3>
+                      <div className="text-sm text-gray-500">{Math.round(((currentStep + 1) / FORM_STEPS.length) * 100)}% Complete</div>
                     </div>
                     
                     {/* Progress bar */}
                     <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                       <div 
                         className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-500 ease-out"
-                        style={{ width: `${((currentStep + 1) / formSteps.length) * 100}%` }}
+                        style={{ width: `${((currentStep + 1) / FORM_STEPS.length) * 100}%` }}
                       ></div>
                     </div>
 
                     {/* Step indicators */}
                     <div className="flex items-center justify-between">
-                      {formSteps.map((step, index) => {
+                      {FORM_STEPS.map((step: any, index: number) => {
                         const Icon = step.icon;
                         const isActive = index === currentStep;
                         const isCompleted = index < currentStep;
@@ -681,10 +691,10 @@ export default function Home() {
                           </Button>
 
                           <div className="text-sm text-gray-500">
-                            Step {currentStep + 1} of {formSteps.length}
+                            Step {currentStep + 1} of {FORM_STEPS.length}
                           </div>
 
-                          {currentStep < formSteps.length - 1 ? (
+                          {currentStep < FORM_STEPS.length - 1 ? (
                             <Button
                               type="button"
                               onClick={goToNextStep}
@@ -758,7 +768,7 @@ export default function Home() {
                                   <SelectValue placeholder="Select language" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {languages.map((lang) => (
+                                  {TRANSLATION_LANGUAGES.map((lang) => (
                                     <SelectItem key={lang.code} value={lang.code}>
                                       {lang.name}
                                     </SelectItem>
@@ -803,7 +813,7 @@ export default function Home() {
               <div className="text-center py-12">
                 <p className="text-gray-500">Loading press releases...</p>
               </div>
-            ) : releases.length === 0 ? (
+            ) : (releases as any[]).length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p className="text-gray-500">No press releases generated yet</p>
@@ -811,7 +821,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="grid gap-6">
-                {releases.map((release: any) => (
+                {(releases as any[]).map((release: any) => (
                   <Card key={release.id}>
                     <CardHeader className="pb-4">
                       <div className="flex justify-between items-start">
@@ -865,7 +875,7 @@ export default function Home() {
                                     <SelectValue placeholder="Select language" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {languages.map((lang) => (
+                                    {TRANSLATION_LANGUAGES.map((lang: any) => (
                                       <SelectItem key={lang.code} value={lang.code}>
                                         {lang.name}
                                       </SelectItem>
