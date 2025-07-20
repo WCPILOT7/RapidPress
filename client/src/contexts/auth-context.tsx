@@ -31,11 +31,10 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Start with false to show UI immediately
+  const [isLoading, setIsLoading] = useState(true);
 
   const checkAuth = async () => {
     try {
-      setIsLoading(true);
       const response = await fetch('/api/auth/me', {
         credentials: 'include',
       });
@@ -51,11 +50,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    // Delay auth check slightly to allow UI to render first
-    const timer = setTimeout(() => {
-      checkAuth();
-    }, 100);
-    return () => clearTimeout(timer);
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
