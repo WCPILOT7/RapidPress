@@ -7,15 +7,19 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, ensureAuth } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      setLocation('/');
-    }
-  }, [user, isLoading, setLocation]);
+    // Ensure auth is checked when accessing protected routes
+    ensureAuth().then((authenticatedUser) => {
+      if (!authenticatedUser && !isLoading) {
+        setLocation('/');
+      }
+    });
+  }, [ensureAuth, isLoading, setLocation]);
 
+  // Show loading only when actively checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
