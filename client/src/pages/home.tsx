@@ -226,6 +226,19 @@ export default function Home() {
     { code: "Norwegian", name: "Norwegian" },
     { code: "Danish", name: "Danish" },
     { code: "Finnish", name: "Finnish" },
+    // Indian Regional Languages
+    { code: "Hindi", name: "Hindi (हिंदी)" },
+    { code: "Bengali", name: "Bengali (বাংলা)" },
+    { code: "Telugu", name: "Telugu (తెలుగు)" },
+    { code: "Marathi", name: "Marathi (मराठी)" },
+    { code: "Tamil", name: "Tamil (தமிழ்)" },
+    { code: "Gujarati", name: "Gujarati (ગુજરાતી)" },
+    { code: "Urdu", name: "Urdu (اردو)" },
+    { code: "Kannada", name: "Kannada (ಕನ್ನಡ)" },
+    { code: "Odia", name: "Odia (ଓଡ଼ିଆ)" },
+    { code: "Malayalam", name: "Malayalam (മലയാളം)" },
+    { code: "Punjabi", name: "Punjabi (ਪੰਜਾਬੀ)" },
+    { code: "Assamese", name: "Assamese (অসমীয়া)" },
   ];
 
   // Helper functions for step navigation

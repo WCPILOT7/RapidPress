@@ -373,9 +373,10 @@ Please provide only the translated press release content, with no additional com
 
       const translatedHeadline = headlineCompletion.choices[0].message.content || existingRelease.headline;
       
-      // Create new translated press release
+      // Create new translated press release (exclude id and createdAt from existing release)
+      const { id: _, createdAt: __, ...releaseData } = existingRelease;
       const translatedRelease = await storage.createPressRelease(userId, {
-        ...existingRelease,
+        ...releaseData,
         headline: translatedHeadline,
         release: translatedContent,
         language: language,
