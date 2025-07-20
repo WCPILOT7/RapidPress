@@ -55,14 +55,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  // Lazy auth check - only when needed, not on initial load
-  useEffect(() => {
-    // Only check auth if we're trying to access a protected route
-    const currentPath = window.location.pathname;
-    if (currentPath !== '/' && currentPath !== '') {
-      checkAuth();
-    }
-  }, [hasCheckedAuth]);
+  // REMOVED: No automatic auth check on load - completely manual
+  // Auth will only be checked when explicitly called by ProtectedRoute
+  // This eliminates all database calls on landing page load
 
   const login = async (email: string, password: string) => {
     const response = await apiRequest('POST', '/api/auth/login', { email, password });
