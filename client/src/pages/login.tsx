@@ -75,12 +75,17 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link href="/register" className="text-blue-600 hover:underline">
-                Sign up
-              </Link>
-            </p>
+            <div className="text-center space-y-2">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{' '}
+                <Link href="/register" className="text-blue-600 hover:underline">
+                  Sign up
+                </Link>
+              </p>
+              <p className="text-xs text-gray-500">
+                Test account: test@example.com / password123
+              </p>
+            </div>
           </CardFooter>
         </form>
       </Card>
