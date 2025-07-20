@@ -59,24 +59,15 @@ export default function SimpleLanding() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold mb-4 bg-yellow-50 border-yellow-200">
-            <span className="text-yellow-600">⭐</span>
-            <span className="ml-2">#1 AI Press Release Platform</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-            Transform Your PR Strategy with{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-              AI-Powered
-            </span>{' '}
-            Press Releases
+    <div className="min-h-screen bg-slate-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Simplified Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            PR Studio
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-            Generate professional press releases, manage media contacts, and create targeted 
-            advertisements in minutes. Trusted by PR professionals worldwide.
+          <p className="text-lg text-gray-600">
+            AI-Powered Press Release Platform
           </p>
         </div>
 
