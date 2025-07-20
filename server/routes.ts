@@ -301,6 +301,10 @@ Please provide the updated press release content based on the user's instruction
     try {
       const { pressReleaseId, platform, type } = req.body;
       
+      if (!pressReleaseId || !platform || !type) {
+        return res.status(400).json({ error: 'Missing required fields: pressReleaseId, platform, type' });
+      }
+      
       const release = await storage.getPressReleaseById(pressReleaseId);
       if (!release) {
         return res.status(404).json({ error: 'Press release not found' });
@@ -395,6 +399,7 @@ Please provide the updated press release content based on the user's instruction
 
       res.json(advertisement);
     } catch (error: any) {
+      console.error('Error creating advertisement:', error);
       res.status(500).json({ error: error.message });
     }
   });

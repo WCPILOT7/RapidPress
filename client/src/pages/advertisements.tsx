@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -56,10 +56,16 @@ export default function Advertisements() {
   // Create advertisement mutation
   const createAdMutation = useMutation({
     mutationFn: async (data: { pressReleaseId: number; platform: string; type: string }) => {
+      console.log('Creating advertisement with data:', data);
       const response = await apiRequest('POST', '/api/advertisements', data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Advertisement created successfully:', data);
       toast({
         title: "Success",
         description: "Advertisement created successfully!",
@@ -71,6 +77,7 @@ export default function Advertisements() {
       setSelectedType("");
     },
     onError: (error: any) => {
+      console.error('Error creating advertisement:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create advertisement",
@@ -325,6 +332,9 @@ export default function Advertisements() {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Advertisement</DialogTitle>
+                <DialogDescription>
+                  Select a press release and platform to generate AI-powered social media posts or advertisements.
+                </DialogDescription>
               </DialogHeader>
               
               <div className="space-y-4 mt-4">
@@ -542,6 +552,9 @@ export default function Advertisements() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{viewingAd?.title}</DialogTitle>
+              <DialogDescription>
+                View the complete advertisement content and generated image.
+              </DialogDescription>
             </DialogHeader>
             
             {viewingAd && (
@@ -617,6 +630,9 @@ export default function Advertisements() {
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>Edit Advertisement</DialogTitle>
+              <DialogDescription>
+                Edit the advertisement content manually or use AI to make specific changes.
+              </DialogDescription>
             </DialogHeader>
             
             {editingAd && (
