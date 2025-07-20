@@ -32,6 +32,7 @@ export const advertisements = pgTable("advertisements", {
   platform: text("platform").notNull(), // "facebook", "twitter", "linkedin", "instagram", "google_ads"
   type: text("type").notNull(), // "social_media", "ad"
   imagePrompt: text("image_prompt"),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

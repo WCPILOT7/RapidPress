@@ -351,17 +351,36 @@ Please provide the updated press release content based on the user's instruction
 
       const content = completion.choices[0].message.content || '';
 
-      // Generate image prompt for visual content
+      // Generate image prompt and actual image for visual content
       let imagePrompt = '';
-      if (platform === 'instagram' || platform === 'facebook') {
+      let imageUrl = '';
+      
+      if (platform === 'instagram' || platform === 'facebook' || platform === 'linkedin' || type === 'ad') {
         const imageCompletion = await openai.chat.completions.create({
           model: 'gpt-4o',
           messages: [
-            { role: 'system', content: 'You are an expert at creating detailed image prompts for social media content.' },
-            { role: 'user', content: `Create a detailed image prompt for a ${platform} post about this: ${release.headline}. The image should be visually appealing and relevant to the content.` },
+            { role: 'system', content: 'You are an expert at creating detailed image prompts for social media and advertising content.' },
+            { role: 'user', content: `Create a detailed image prompt for a ${platform} ${type} about this: ${release.headline}. The image should be professional, visually appealing, and relevant to the content. Keep it under 1000 characters.` },
           ],
         });
         imagePrompt = imageCompletion.choices[0].message.content || '';
+
+        // Generate actual image using DALL-E
+        if (imagePrompt) {
+          try {
+            const imageResponse = await openai.images.generate({
+              model: "dall-e-3",
+              prompt: imagePrompt,
+              n: 1,
+              size: "1024x1024",
+              quality: "standard",
+            });
+            imageUrl = imageResponse.data?.[0]?.url || '';
+          } catch (error) {
+            console.log('Image generation failed:', error);
+            // Continue without image if generation fails
+          }
+        }
       }
 
       const advertisement = await storage.createAdvertisement({
@@ -371,6 +390,7 @@ Please provide the updated press release content based on the user's instruction
         platform,
         type,
         imagePrompt: imagePrompt || undefined,
+        imageUrl: imageUrl || undefined,
       });
 
       res.json(advertisement);
@@ -395,6 +415,107 @@ Please provide the updated press release content based on the user's instruction
       const pressReleaseId = parseInt(req.params.id);
       const advertisements = await storage.getAdvertisementsByPressReleaseId(pressReleaseId);
       res.json(advertisements);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update advertisement
+  app.put('/api/advertisements/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { content, title } = req.body;
+      
+      const existingAd = await storage.getAdvertisementById(id);
+      if (!existingAd) {
+        return res.status(404).json({ error: 'Advertisement not found' });
+      }
+
+      const updatedAdvertisement = await storage.updateAdvertisement(id, { 
+        content: content || existingAd.content,
+        title: title || existingAd.title 
+      });
+      res.json(updatedAdvertisement);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Edit advertisement with AI
+  app.post('/api/advertisements/:id/edit', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { instruction, currentContent } = req.body;
+      
+      const existingAd = await storage.getAdvertisementById(id);
+      if (!existingAd) {
+        return res.status(404).json({ error: 'Advertisement not found' });
+      }
+
+      const prompt = `You are editing ${existingAd.type === 'social_media' ? 'a social media post' : 'an advertisement'} for ${existingAd.platform}. Here is the current content:
+
+${currentContent}
+
+User instruction: ${instruction}
+
+Please provide the updated content based on the user's instruction. Keep it appropriate for ${existingAd.platform} and maintain the ${existingAd.type === 'social_media' ? 'social media post' : 'advertisement'} format and style. Only return the updated content, no additional commentary.`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: `You are a social media and advertising expert. Modify the content based on user instructions while maintaining platform-specific best practices for ${existingAd.platform}.` },
+          { role: 'user', content: prompt },
+        ],
+      });
+
+      const updatedContent = completion.choices[0].message.content || currentContent;
+      
+      res.json({ content: updatedContent });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Regenerate image for advertisement
+  app.post('/api/advertisements/:id/regenerate-image', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { imagePrompt } = req.body;
+      
+      const existingAd = await storage.getAdvertisementById(id);
+      if (!existingAd) {
+        return res.status(404).json({ error: 'Advertisement not found' });
+      }
+
+      const promptToUse = imagePrompt || existingAd.imagePrompt;
+      if (!promptToUse) {
+        return res.status(400).json({ error: 'No image prompt available' });
+      }
+
+      try {
+        const imageResponse = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: promptToUse,
+          n: 1,
+          size: "1024x1024",
+          quality: "standard",
+        });
+        
+        const imageUrl = imageResponse.data?.[0]?.url || '';
+        
+        if (imageUrl) {
+          const updatedAdvertisement = await storage.updateAdvertisement(id, { 
+            imageUrl,
+            imagePrompt: imagePrompt || existingAd.imagePrompt
+          });
+          res.json(updatedAdvertisement);
+        } else {
+          res.status(500).json({ error: 'Failed to generate image' });
+        }
+      } catch (error) {
+        console.log('Image generation failed:', error);
+        res.status(500).json({ error: 'Image generation failed' });
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

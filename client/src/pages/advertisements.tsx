@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Share2, Facebook, Twitter, Linkedin, Instagram, Monitor, Plus, Trash2, Copy, Eye, Newspaper, ArrowLeft } from "lucide-react";
+import { Share2, Facebook, Twitter, Linkedin, Instagram, Monitor, Plus, Trash2, Copy, Eye, Newspaper, ArrowLeft, Edit, Save, X, RefreshCw, Image as ImageIcon } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { PressRelease, Advertisement } from "@shared/schema";
@@ -34,6 +36,11 @@ export default function Advertisements() {
   const [selectedType, setSelectedType] = useState<string>("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [viewingAd, setViewingAd] = useState<Advertisement | null>(null);
+  const [editingAd, setEditingAd] = useState<Advertisement | null>(null);
+  const [editedContent, setEditedContent] = useState("");
+  const [editedTitle, setEditedTitle] = useState("");
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [isAiEditMode, setIsAiEditMode] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -94,6 +101,75 @@ export default function Advertisements() {
     },
   });
 
+  // Update advertisement mutation
+  const updateAdMutation = useMutation({
+    mutationFn: async ({ id, content, title }: { id: number; content: string; title: string }) => {
+      const response = await apiRequest('PUT', `/api/advertisements/${id}`, { content, title });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Advertisement updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/advertisements"] });
+      setEditingAd(null);
+      setEditedContent("");
+      setEditedTitle("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update advertisement",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // AI edit advertisement mutation
+  const aiEditMutation = useMutation({
+    mutationFn: async ({ id, instruction, currentContent }: { id: number; instruction: string; currentContent: string }) => {
+      const response = await apiRequest('POST', `/api/advertisements/${id}/edit`, { instruction, currentContent });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setEditedContent(data.content);
+      toast({
+        title: "Success",
+        description: "AI edit completed! Review and save the changes.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to edit with AI",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Regenerate image mutation
+  const regenerateImageMutation = useMutation({
+    mutationFn: async ({ id, imagePrompt }: { id: number; imagePrompt?: string }) => {
+      const response = await apiRequest('POST', `/api/advertisements/${id}/regenerate-image`, { imagePrompt });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Image regenerated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/advertisements"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to regenerate image",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateAd = () => {
     if (!selectedPressRelease || !selectedPlatform || !selectedType) {
       toast({
@@ -115,6 +191,44 @@ export default function Advertisements() {
     if (confirm("Are you sure you want to delete this advertisement?")) {
       deleteAdMutation.mutate(id);
     }
+  };
+
+  const handleEdit = (ad: Advertisement) => {
+    setEditingAd(ad);
+    setEditedContent(ad.content);
+    setEditedTitle(ad.title);
+    setAiInstruction("");
+    setIsAiEditMode(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingAd) return;
+    updateAdMutation.mutate({
+      id: editingAd.id,
+      content: editedContent,
+      title: editedTitle,
+    });
+  };
+
+  const handleAiEdit = () => {
+    if (!editingAd || !aiInstruction.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide an instruction for AI editing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    aiEditMutation.mutate({
+      id: editingAd.id,
+      instruction: aiInstruction,
+      currentContent: editedContent,
+    });
+  };
+
+  const handleRegenerateImage = (ad: Advertisement) => {
+    regenerateImageMutation.mutate({ id: ad.id });
   };
 
   const copyToClipboard = (content: string) => {
@@ -340,11 +454,30 @@ export default function Advertisements() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
+                      {ad.imageUrl && (
+                        <div className="relative">
+                          <img 
+                            src={ad.imageUrl} 
+                            alt="Generated advertisement image"
+                            className="w-full h-32 object-cover rounded-lg"
+                          />
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleRegenerateImage(ad)}
+                            disabled={regenerateImageMutation.isPending}
+                            className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${regenerateImageMutation.isPending ? 'animate-spin' : ''}`} />
+                          </Button>
+                        </div>
+                      )}
+                      
                       <div className="bg-gray-50 p-3 rounded-lg">
                         <p className="text-sm text-gray-700 line-clamp-3">{ad.content}</p>
                       </div>
                       
-                      {ad.imagePrompt && (
+                      {ad.imagePrompt && !ad.imageUrl && (
                         <div className="bg-blue-50 p-3 rounded-lg">
                           <p className="text-xs font-medium text-blue-800 mb-1">Image Suggestion:</p>
                           <p className="text-xs text-blue-700 line-clamp-2">{ad.imagePrompt}</p>
@@ -355,12 +488,12 @@ export default function Advertisements() {
                         <span>Created {format(new Date(ad.createdAt), 'MMM d, yyyy')}</span>
                       </div>
                       
-                      <div className="flex space-x-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setViewingAd(ad)}
-                          className="flex-1"
+                          className="w-full"
                         >
                           <Eye className="w-4 h-4 mr-1" />
                           View
@@ -368,12 +501,33 @@ export default function Advertisements() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => handleEdit(ad)}
+                          className="w-full"
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => copyToClipboard(ad.content)}
-                          className="flex-1"
+                          className="w-full"
                         >
                           <Copy className="w-4 h-4 mr-1" />
                           Copy
                         </Button>
+                        {ad.imageUrl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRegenerateImage(ad)}
+                            disabled={regenerateImageMutation.isPending}
+                            className="w-full"
+                          >
+                            <ImageIcon className="w-4 h-4 mr-1" />
+                            New Image
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -403,6 +557,17 @@ export default function Advertisements() {
                     {viewingAd.type === 'social_media' ? 'Social Media' : 'Advertisement'}
                   </Badge>
                 </div>
+
+                {viewingAd.imageUrl && (
+                  <div>
+                    <h4 className="font-medium mb-2">Generated Image:</h4>
+                    <img 
+                      src={viewingAd.imageUrl} 
+                      alt="Generated advertisement image"
+                      className="w-full max-w-md mx-auto rounded-lg border"
+                    />
+                  </div>
+                )}
                 
                 <div>
                   <h4 className="font-medium mb-2">Content:</h4>
@@ -413,7 +578,7 @@ export default function Advertisements() {
                 
                 {viewingAd.imagePrompt && (
                   <div>
-                    <h4 className="font-medium mb-2">Image Suggestion:</h4>
+                    <h4 className="font-medium mb-2">Image Prompt:</h4>
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <p className="text-blue-800">{viewingAd.imagePrompt}</p>
                     </div>
@@ -434,6 +599,122 @@ export default function Advertisements() {
                     className="flex-1"
                   >
                     Close
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Advertisement Dialog */}
+        <Dialog open={!!editingAd} onOpenChange={() => {
+          setEditingAd(null);
+          setEditedContent("");
+          setEditedTitle("");
+          setAiInstruction("");
+          setIsAiEditMode(false);
+        }}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Edit Advertisement</DialogTitle>
+            </DialogHeader>
+            
+            {editingAd && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`p-2 rounded-lg ${getPlatformColor(editingAd.platform)}`}>
+                      {(() => {
+                        const Icon = getPlatformIcon(editingAd.platform);
+                        return <Icon className="w-4 h-4 text-white" />;
+                      })()}
+                    </div>
+                    <Badge variant={editingAd.type === 'social_media' ? 'default' : 'secondary'}>
+                      {editingAd.type === 'social_media' ? 'Social Media' : 'Advertisement'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button
+                      variant={isAiEditMode ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setIsAiEditMode(!isAiEditMode)}
+                    >
+                      AI Edit
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Title
+                  </label>
+                  <Input
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    placeholder="Advertisement title"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Content
+                  </label>
+                  <Textarea
+                    value={editedContent}
+                    onChange={(e) => setEditedContent(e.target.value)}
+                    placeholder="Advertisement content"
+                    rows={6}
+                    className="resize-none"
+                  />
+                </div>
+
+                {isAiEditMode && (
+                  <div className="border-t pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      AI Edit Instruction
+                    </label>
+                    <div className="flex space-x-2">
+                      <Textarea
+                        value={aiInstruction}
+                        onChange={(e) => setAiInstruction(e.target.value)}
+                        placeholder="Tell AI how to modify the content (e.g., 'make it more exciting', 'add emojis', 'make it shorter')"
+                        rows={2}
+                        className="flex-1 resize-none"
+                      />
+                      <Button
+                        onClick={handleAiEdit}
+                        disabled={aiEditMutation.isPending || !aiInstruction.trim()}
+                        className="self-end"
+                      >
+                        {aiEditMutation.isPending ? "Processing..." : "Apply AI Edit"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex space-x-2 pt-4 border-t">
+                  <Button
+                    onClick={handleSaveEdit}
+                    disabled={updateAdMutation.isPending}
+                    className="flex-1"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {updateAdMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingAd(null);
+                      setEditedContent("");
+                      setEditedTitle("");
+                      setAiInstruction("");
+                      setIsAiEditMode(false);
+                    }}
+                    className="flex-1"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
                   </Button>
                 </div>
               </div>

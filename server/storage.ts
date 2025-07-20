@@ -20,6 +20,8 @@ export interface IStorage {
   createAdvertisement(advertisement: InsertAdvertisement): Promise<Advertisement>;
   getAdvertisements(): Promise<Advertisement[]>;
   getAdvertisementsByPressReleaseId(pressReleaseId: number): Promise<Advertisement[]>;
+  getAdvertisementById(id: number): Promise<Advertisement | undefined>;
+  updateAdvertisement(id: number, updates: Partial<Advertisement>): Promise<Advertisement>;
   deleteAdvertisement(id: number): Promise<void>;
 }
 
@@ -95,6 +97,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...advertisement,
         imagePrompt: advertisement.imagePrompt || null,
+        imageUrl: advertisement.imageUrl || null,
       })
       .returning();
     return newAdvertisement;
@@ -112,6 +115,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(advertisements.pressReleaseId, pressReleaseId))
       .orderBy(advertisements.createdAt);
     return results.reverse(); // Newest first
+  }
+
+  async getAdvertisementById(id: number): Promise<Advertisement | undefined> {
+    const [advertisement] = await db.select().from(advertisements).where(eq(advertisements.id, id));
+    return advertisement || undefined;
+  }
+
+  async updateAdvertisement(id: number, updates: Partial<Advertisement>): Promise<Advertisement> {
+    const [updatedAdvertisement] = await db
+      .update(advertisements)
+      .set(updates)
+      .where(eq(advertisements.id, id))
+      .returning();
+    
+    if (!updatedAdvertisement) {
+      throw new Error('Advertisement not found');
+    }
+    
+    return updatedAdvertisement;
   }
 
   async deleteAdvertisement(id: number): Promise<void> {

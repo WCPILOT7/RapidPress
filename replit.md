@@ -39,11 +39,14 @@ The application follows a full-stack TypeScript architecture with clear separati
 ### Database Schema
 - **Press Releases**: Core entity storing company info, headlines, content, and AI-generated releases with edit capabilities
 - **Contacts**: Media contact information including name, email, and publication
+- **Advertisements**: Social media posts and ads generated from press releases with platform-specific content, AI-generated images, and editing capabilities
 - **Timestamps**: Automatic creation tracking for all entities
-- **AI Editing**: Press releases can be updated through conversational AI interface or manual editing
+- **AI Editing**: Press releases and advertisements can be updated through conversational AI interface or manual editing
+- **Image Generation**: DALL-E 3 integration for creating platform-specific visual content
 
 ### External Integrations
-- **OpenAI API**: GPT-4o model for AI-powered press release generation
+- **OpenAI API**: GPT-4o model for AI-powered press release generation and advertisement content creation
+- **DALL-E 3 API**: AI image generation for social media posts and advertisements
 - **Email Service**: Gmail SMTP for automated distribution
 - **File Upload**: CSV processing for bulk contact imports
 
@@ -52,7 +55,10 @@ The application follows a full-stack TypeScript architecture with clear separati
 1. **Press Release Generation**: User inputs company details → OpenAI processes content → Generated release stored in database
 2. **Contact Management**: CSV upload → File processing → Bulk contact creation → Database storage
 3. **Distribution**: Select release + contacts → Email composition → Nodemailer sends → Tracking stored
-4. **History Management**: Database queries → React Query caching → UI display with filtering
+4. **Advertisement Creation**: Select press release + platform → OpenAI generates content + DALL-E creates image → Advertisement stored in database
+5. **Advertisement Editing**: Manual text editing or AI-powered content modification → Updated content saved
+6. **Image Regeneration**: User triggers image refresh → DALL-E creates new image → Updated advertisement saved
+7. **History Management**: Database queries → React Query caching → UI display with filtering
 
 ## External Dependencies
 
