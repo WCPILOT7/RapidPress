@@ -13,7 +13,6 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
-  ensureAuth: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,13 +31,9 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Don't block initial render
-  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const checkAuth = async () => {
-    if (hasCheckedAuth) return; // Prevent duplicate checks
-    
-    setIsLoading(true);
     try {
       const response = await fetch('/api/auth/me', {
         credentials: 'include',
@@ -51,49 +46,36 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('Not authenticated');
     } finally {
       setIsLoading(false);
-      setHasCheckedAuth(true);
     }
   };
 
-  // Lazy auth check - only when needed, not on initial load
   useEffect(() => {
-    // Only check auth if we're trying to access a protected route
-    const currentPath = window.location.pathname;
-    if (currentPath !== '/' && currentPath !== '') {
-      checkAuth();
-    }
-  }, [hasCheckedAuth]);
+    checkAuth();
+  }, []);
 
   const login = async (email: string, password: string) => {
     const response = await apiRequest('POST', '/api/auth/login', { email, password });
     const data = await response.json();
     setUser(data.user);
-    setHasCheckedAuth(true); // Mark as authenticated without extra API call
+    // Force a re-check of auth status
+    await checkAuth();
   };
 
   const register = async (name: string, email: string, password: string) => {
     const response = await apiRequest('POST', '/api/auth/register', { name, email, password });
     const data = await response.json();
     setUser(data.user);
-    setHasCheckedAuth(true); // Mark as authenticated without extra API call
+    // Force a re-check of auth status
+    await checkAuth();
   };
 
   const logout = async () => {
     await apiRequest('POST', '/api/auth/logout');
     setUser(null);
-    setHasCheckedAuth(false); // Reset auth check state
-  };
-
-  // Expose checkAuth for manual calls when needed
-  const ensureAuth = async () => {
-    if (!hasCheckedAuth) {
-      await checkAuth();
-    }
-    return user;
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading, ensureAuth }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

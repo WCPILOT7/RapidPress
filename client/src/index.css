@@ -2,27 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Performance optimizations */
-* {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Optimize repaints and reflows */
-.hero-section {
-  contain: layout style paint;
-}
-
-/* Reduce layout thrashing */
-.features-grid {
-  contain: layout;
-}
-
-/* Pre-render auth form content */
-.auth-form {
-  contain: layout style;
-}
-
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);
