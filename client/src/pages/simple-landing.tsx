@@ -60,14 +60,14 @@ export default function SimpleLanding() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Hero Section */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold mb-4 bg-yellow-50 border-yellow-200">
             <span className="text-yellow-600">⭐</span>
             <span className="ml-2">#1 AI Press Release Platform</span>
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
             Transform Your PR Strategy with{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
               AI-Powered
@@ -168,10 +168,10 @@ export default function SimpleLanding() {
         </div>
 
         {/* Auth Section */}
-        <div className="max-w-md mx-auto">
+        <div className="w-full max-w-4xl mx-auto">
           <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center pb-6">
-              <CardTitle className="text-3xl font-bold">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">
                 {isLogin ? 'Welcome Back!' : 'Start Your Free Trial'}
               </CardTitle>
               <CardDescription className="text-gray-600 text-lg">
@@ -182,61 +182,63 @@ export default function SimpleLanding() {
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-5 px-6 pb-8">
-                {!isLogin && (
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+              <CardContent className="space-y-5 px-4 sm:px-6 lg:px-8 pb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {!isLogin && (
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="Enter your full name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                  )}
+                  <div className={`space-y-2 ${isLogin ? 'md:col-span-2' : ''}`}>
+                    <Label htmlFor="email">Email Address</Label>
                     <Input
-                      id="name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                       className="h-12"
                     />
                   </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="h-12"
-                  />
-                </div>
-                {!isLogin && (
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className={`space-y-2 ${isLogin ? 'md:col-span-2' : ''}`}>
+                    <Label htmlFor="password">Password</Label>
                     <Input
-                      id="confirmPassword"
+                      id="password"
                       type="password"
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
                       className="h-12"
                     />
                   </div>
-                )}
+                  {!isLogin && (
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="Confirm your password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="h-12"
+                      />
+                    </div>
+                  )}
+                </div>
                 
                 <Button 
                   type="submit" 
@@ -309,17 +311,17 @@ export default function SimpleLanding() {
         {/* Social Proof */}
         <div className="text-center mt-16">
           <p className="text-gray-500 text-sm mb-6">Trusted by professionals at leading companies</p>
-          <div className="flex items-center justify-center space-x-12 opacity-60">
-            <div className="text-xl font-bold text-gray-400">TechCorp</div>
-            <div className="text-xl font-bold text-gray-400">MediaFlow</div>
-            <div className="text-xl font-bold text-gray-400">StartupLab</div>
-            <div className="text-xl font-bold text-gray-400">InnovatePR</div>
-            <div className="text-xl font-bold text-gray-400">GlobalNews</div>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 lg:gap-12 opacity-60">
+            <div className="text-lg sm:text-xl font-bold text-gray-400">TechCorp</div>
+            <div className="text-lg sm:text-xl font-bold text-gray-400">MediaFlow</div>
+            <div className="text-lg sm:text-xl font-bold text-gray-400">StartupLab</div>
+            <div className="text-lg sm:text-xl font-bold text-gray-400">InnovatePR</div>
+            <div className="text-lg sm:text-xl font-bold text-gray-400">GlobalNews</div>
           </div>
         </div>
 
         {/* Trust Indicators */}
-        <div className="flex justify-center space-x-8 mt-12">
+        <div className="flex flex-wrap justify-center gap-4 sm:gap-8 mt-12">
           <div className="flex items-center text-sm text-gray-500">
             <span className="text-green-500 mr-2">✓</span>
             SOC 2 Compliant
