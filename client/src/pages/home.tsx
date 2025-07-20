@@ -340,7 +340,6 @@ export default function Home() {
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
                 <Newspaper className="text-blue-600 text-2xl mr-3" />
-                <h1 className="text-xl font-bold text-gray-900">PR Studio</h1>
               </div>
               <nav className="hidden md:ml-8 md:flex md:space-x-8">
                 {navItems.map((item) => {
