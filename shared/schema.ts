@@ -4,6 +4,7 @@ import { z } from "zod";
 
 export const pressReleases = pgTable("press_releases", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
   company: text("company").notNull(),
   headline: text("headline").notNull(),
   copy: text("copy").notNull(),
@@ -20,6 +21,7 @@ export const pressReleases = pgTable("press_releases", {
 
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
   publication: text("publication").notNull(),
@@ -28,6 +30,7 @@ export const contacts = pgTable("contacts", {
 
 export const advertisements = pgTable("advertisements", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
   pressReleaseId: integer("press_release_id").notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
@@ -65,6 +68,7 @@ export const users = pgTable("users", {
 
 export const insertPressReleaseSchema = createInsertSchema(pressReleases).omit({
   id: true,
+  userId: true,
   headline: true,
   release: true,
   createdAt: true,
@@ -72,11 +76,13 @@ export const insertPressReleaseSchema = createInsertSchema(pressReleases).omit({
 
 export const insertContactSchema = createInsertSchema(contacts).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
 export const insertAdvertisementSchema = createInsertSchema(advertisements).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
