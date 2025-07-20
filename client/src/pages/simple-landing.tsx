@@ -168,7 +168,7 @@ export default function SimpleLanding() {
         </div>
 
         {/* Auth Section */}
-        <div className="max-w-md mx-auto">
+        <div className="max-w-lg mx-auto">
           <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center pb-6">
               <CardTitle className="text-3xl font-bold">
@@ -182,7 +182,7 @@ export default function SimpleLanding() {
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-5 px-6 pb-8">
+              <CardContent className="space-y-6 px-8">
                 {!isLogin && (
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
@@ -240,21 +240,15 @@ export default function SimpleLanding() {
                 
                 <Button 
                   type="submit" 
-                  className="w-full h-12 text-base font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200" 
+                  className="w-full h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200" 
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Processing...' : (isLogin ? 'Sign In to Dashboard' : 'Start Free Trial')}
+                  {isLoading ? 'Processing...' : (isLogin ? 'Sign In to Dashboard' : 'Start Free Trial - No Credit Card Required')}
                 </Button>
-                
-                {!isLogin && (
-                  <p className="text-center text-xs text-gray-500 -mt-2">
-                    No credit card required
-                  </p>
-                )}
 
                 {!isLogin && (
                   <div className="text-center">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-500">
                       Free forever • No setup fees • Cancel anytime
                     </p>
                   </div>
@@ -262,7 +256,7 @@ export default function SimpleLanding() {
 
                 {isLogin && (
                   <div className="text-center">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-500">
                       Demo account: test@example.com / password123
                     </p>
                   </div>
