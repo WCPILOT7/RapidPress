@@ -60,12 +60,18 @@ Return only the headline, no quotes or additional text.`;
 
 Company: ${validatedData.company}
 Headline: ${generatedHeadline}
+Release Date: ${validatedData.date}
 Copy: ${validatedData.copy}
 PR Contact: ${validatedData.contact}
 Contact Email: ${validatedData.contactEmail}
 Contact Phone: ${validatedData.contactPhone}
 Quote: ${validatedData.quote || 'No quote provided'}
 Competitor Info: ${validatedData.competitors || 'No competitor information provided'}
+Brand Tone & Guidelines: ${validatedData.brandTone || 'No specific brand guidelines provided'}
+
+IMPORTANT: Use the provided release date (${validatedData.date}) prominently in the press release. Format the date appropriately in the press release header or opening paragraph.
+
+${validatedData.brandTone ? `Follow these brand tone, voice, and guidelines: ${validatedData.brandTone}. If company boilerplate details are provided in the guidelines, incorporate them appropriately into the press release.` : ''}
 
 Structure it with the provided headline, subheadline, main body, quote, and boilerplate with proper contact information. Make it professional and newsworthy.`;
 

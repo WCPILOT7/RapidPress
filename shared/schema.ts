@@ -10,6 +10,8 @@ export const pressReleases = pgTable("press_releases", {
   contact: text("contact").notNull(),
   contactEmail: text("contact_email").notNull(),
   contactPhone: text("contact_phone").notNull(),
+  date: text("date").notNull(),
+  brandTone: text("brand_tone"),
   quote: text("quote"),
   competitors: text("competitors"),
   release: text("release").notNull(),

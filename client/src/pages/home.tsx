@@ -319,8 +319,8 @@ export default function Home() {
                             <FormLabel>Brand Tone, Voice & Guidelines</FormLabel>
                             <FormControl>
                               <Textarea
-                                rows={3}
-                                placeholder="Describe your brand's tone of voice, writing style, or specific guidelines (e.g., formal, casual, technical, friendly, etc.)..."
+                                rows={4}
+                                placeholder="Describe your brand's tone of voice, writing style, guidelines, and company boilerplate details. Include any standard company descriptions, mission statements, or key messaging you want incorporated (e.g., formal, casual, technical, friendly, etc.)..."
                                 {...field}
                               />
                             </FormControl>
