@@ -101,17 +101,19 @@ The application follows a full-stack TypeScript architecture with clear separati
 
 ## Recent Changes
 
-### July 20, 2025 - Translation Feature Implementation
-- **Multi-Language Support**: Added comprehensive translation system for press releases
+### July 20, 2025 - Translation Feature Implementation & UI Improvements
+- **Multi-Language Support**: Added comprehensive translation system for press releases with Indian regional languages
 - **Language Field**: Extended database schema with language and originalId fields for tracking translations
 - **AI Translation**: Implemented GPT-4o powered translation preserving professional format and structure
 - **Translation UI**: Added translation dialogs in both generated release view and history section
-- **15+ Languages**: Support for Spanish, French, German, Italian, Portuguese, Chinese, Japanese, Korean, Arabic, Russian, Dutch, Swedish, Norwegian, Danish, Finnish
+- **27+ Languages**: Support for Spanish, French, German, Italian, Portuguese, Chinese, Japanese, Korean, Arabic, Russian, Dutch, Swedish, Norwegian, Danish, Finnish, plus 12 Indian regional languages (Hindi, Bengali, Telugu, Marathi, Tamil, Gujarati, Urdu, Kannada, Odia, Malayalam, Punjabi, Assamese)
 - **Language Badges**: Visual indicators showing press release language in history view
 - **Proper Linking**: Translated versions reference original press release for relationship tracking
+- **Translation Bug Fix**: Fixed duplicate key constraint error by properly excluding id and createdAt fields
+- **UI Cleanup**: Removed unwanted h1 element from navigation header
+- **Button Fix**: Fixed "Generate Press Release" button to work on first click by simplifying form submission logic
 - **Session Authentication**: Fixed session persistence issues with proper cookie configuration for Replit environment
-- **Form Submission Control**: Prevented duplicate press release generation during wizard step navigation
 
-**Rollback Point**: This version includes stable translation functionality with enhanced user experience.
+**Rollback Point**: This version includes stable translation functionality with enhanced user experience and improved UI responsiveness.
 
 The application is designed for scalability with clear separation of concerns, type safety throughout the stack, and modern development practices including hot reloading and error handling.

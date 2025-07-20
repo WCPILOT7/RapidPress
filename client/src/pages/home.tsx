@@ -159,14 +159,11 @@ export default function Home() {
     },
   });
 
-  const [isGenerating, setIsGenerating] = useState(false);
-
   const onSubmit = (data: FormData) => {
-    // Only submit if we're on the final step and explicitly generating
-    if (currentStep === formSteps.length - 1 && isGenerating) {
+    // Only submit if we're on the final step
+    if (currentStep === formSteps.length - 1) {
       try {
         generateMutation.mutate(data);
-        setIsGenerating(false);
       } catch (error) {
         console.error('Form submission error:', error);
         toast({
@@ -174,14 +171,12 @@ export default function Home() {
           description: "Unable to submit form. Please try again.",
           variant: "destructive",
         });
-        setIsGenerating(false);
       }
     }
   };
 
   const handleGenerateClick = () => {
     if (currentStep === formSteps.length - 1 && isStepValid(currentStep)) {
-      setIsGenerating(true);
       form.handleSubmit(onSubmit)();
     }
   };
