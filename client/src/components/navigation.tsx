@@ -25,9 +25,9 @@ export function Navigation() {
             PR Studio
           </Link>
           <div className="flex items-center space-x-4">
-            <Link href="/">
+            <Link href="/dashboard">
               <Button 
-                variant={location === '/' ? 'default' : 'ghost'} 
+                variant={location === '/dashboard' ? 'default' : 'ghost'} 
                 size="sm"
                 className="flex items-center space-x-2"
               >

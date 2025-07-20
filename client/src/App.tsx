@@ -9,15 +9,12 @@ import { ProtectedRoute } from "@/components/protected-route";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Advertisements from "@/pages/advertisements";
-import Login from "@/pages/login";
-import Register from "@/pages/register";
+import Landing from "@/pages/landing";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/">
+      <Route path="/dashboard">
         <ProtectedRoute>
           <Navigation />
           <Home />
@@ -29,7 +26,7 @@ function Router() {
           <Advertisements />
         </ProtectedRoute>
       </Route>
-      <Route component={NotFound} />
+      <Route path="/" component={Landing} />
     </Switch>
   );
 }

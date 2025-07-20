@@ -57,12 +57,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const response = await apiRequest('POST', '/api/auth/login', { email, password });
     const data = await response.json();
     setUser(data.user);
+    // Force a re-check of auth status
+    await checkAuth();
   };
 
   const register = async (name: string, email: string, password: string) => {
     const response = await apiRequest('POST', '/api/auth/register', { name, email, password });
     const data = await response.json();
     setUser(data.user);
+    // Force a re-check of auth status
+    await checkAuth();
   };
 
   const logout = async () => {
