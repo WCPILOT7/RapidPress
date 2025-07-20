@@ -8,6 +8,8 @@ export const pressReleases = pgTable("press_releases", {
   headline: text("headline").notNull(),
   copy: text("copy").notNull(),
   contact: text("contact").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone").notNull(),
   quote: text("quote"),
   competitors: text("competitors"),
   release: text("release").notNull(),
@@ -24,6 +26,7 @@ export const contacts = pgTable("contacts", {
 
 export const insertPressReleaseSchema = createInsertSchema(pressReleases).omit({
   id: true,
+  headline: true,
   release: true,
   createdAt: true,
 });

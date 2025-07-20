@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Press Release methods
-  createPressRelease(pressRelease: InsertPressRelease & { release: string }): Promise<PressRelease>;
+  createPressRelease(pressRelease: InsertPressRelease & { headline: string; release: string }): Promise<PressRelease>;
   getPressReleases(): Promise<PressRelease[]>;
   getPressReleaseById(id: number): Promise<PressRelease | undefined>;
   updatePressRelease(id: number, updates: Partial<PressRelease>): Promise<PressRelease>;
@@ -18,7 +18,7 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  async createPressRelease(data: InsertPressRelease & { release: string }): Promise<PressRelease> {
+  async createPressRelease(data: InsertPressRelease & { headline: string; release: string }): Promise<PressRelease> {
     const [pressRelease] = await db
       .insert(pressReleases)
       .values({

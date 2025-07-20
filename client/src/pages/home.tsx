@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Newspaper, FileText, Users, Send, Wand2, Eye, Trash2, Upload } from "lucide-react";
+import { Newspaper, FileText, Users, Send, Wand2, Eye, Trash2, Upload, Edit, Save, X } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -11,14 +11,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import type { PressRelease } from "@shared/schema";
 
 const formSchema = z.object({
   company: z.string().min(1, "Company name is required"),
-  headline: z.string().min(1, "Headline is required"),
   copy: z.string().min(1, "Main copy is required"),
   contact: z.string().min(1, "PR contact is required"),
+  contactEmail: z.string().email("Valid email is required"),
+  contactPhone: z.string().min(1, "Phone number is required"),
   quote: z.string().optional(),
   competitors: z.string().optional(),
 });
@@ -28,6 +31,8 @@ type FormData = z.infer<typeof formSchema>;
 export default function Home() {
   const [activeSection, setActiveSection] = useState("generate");
   const [generatedRelease, setGeneratedRelease] = useState<any>(null);
+  const [editingRelease, setEditingRelease] = useState<PressRelease | null>(null);
+  const [editInstruction, setEditInstruction] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -35,9 +40,10 @@ export default function Home() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       company: "",
-      headline: "",
       copy: "",
       contact: "",
+      contactEmail: "",
+      contactPhone: "",
       quote: "",
       competitors: "",
     },
@@ -54,6 +60,7 @@ export default function Home() {
         title: "Success",
         description: "Press release generated successfully!",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/releases"] });
     },
     onError: (error: any) => {
       toast({
@@ -64,12 +71,60 @@ export default function Home() {
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: async ({ id, instruction }: { id: number, instruction: string }) => {
+      const response = await apiRequest('POST', `/api/releases/${id}/edit`, {
+        instruction,
+        currentContent: editingRelease?.release || ""
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setEditingRelease({ ...editingRelease!, release: data.release });
+      setEditInstruction("");
+      toast({
+        title: "Success",
+        description: "Press release updated successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/releases"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to edit press release",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const saveEditMutation = useMutation({
+    mutationFn: async ({ id, release }: { id: number, release: string }) => {
+      const response = await apiRequest('PUT', `/api/releases/${id}`, { release });
+      return response.json();
+    },
+    onSuccess: () => {
+      setEditingRelease(null);
+      toast({
+        title: "Success",
+        description: "Changes saved successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/releases"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save changes",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: FormData) => {
     generateMutation.mutate(data);
   };
 
   // History functionality
-  const { data: releases = [], isLoading: releasesLoading } = useQuery({
+  const { data: releases = [], isLoading: releasesLoading } = useQuery<PressRelease[]>({
     queryKey: ["/api/releases"],
   });
 
@@ -181,9 +236,9 @@ export default function Home() {
                           name="contact"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>PR Contact *</FormLabel>
+                              <FormLabel>PR Contact Name *</FormLabel>
                               <FormControl>
-                                <Input placeholder="Contact person for media inquiries" {...field} />
+                                <Input placeholder="Contact person name" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -191,19 +246,34 @@ export default function Home() {
                         />
                       </div>
 
-                      <FormField
-                        control={form.control}
-                        name="headline"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Headline *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Compelling headline for your press release" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="contactEmail"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Contact Email *</FormLabel>
+                              <FormControl>
+                                <Input type="email" placeholder="contact@company.com" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="contactPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Contact Phone *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="+1 (555) 123-4567" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
                       <FormField
                         control={form.control}
@@ -280,16 +350,25 @@ export default function Home() {
                       <div className="prose prose-sm max-w-none">
                         <pre className="whitespace-pre-wrap text-sm">{generatedRelease.release}</pre>
                       </div>
-                      <Button
-                        onClick={() => {
-                          navigator.clipboard.writeText(generatedRelease.release);
-                          toast({ title: "Copied", description: "Press release copied to clipboard" });
-                        }}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        Copy to Clipboard
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedRelease.release);
+                            toast({ title: "Copied", description: "Press release copied to clipboard" });
+                          }}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          Copy to Clipboard
+                        </Button>
+                        <Button
+                          onClick={() => setEditingRelease(generatedRelease)}
+                          variant="outline"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-12 text-gray-500">
@@ -343,6 +422,14 @@ export default function Home() {
                           >
                             <Eye className="w-4 h-4 mr-2" />
                             Copy
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingRelease(release)}
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
                           </Button>
                           <Button
                             variant="outline"
@@ -452,6 +539,65 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Edit Dialog */}
+      {editingRelease && (
+        <Dialog open={!!editingRelease} onOpenChange={() => setEditingRelease(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Press Release</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-medium mb-2">Current Release</h4>
+                <Textarea 
+                  value={editingRelease.release} 
+                  onChange={(e) => setEditingRelease({ ...editingRelease, release: e.target.value })}
+                  rows={15}
+                  className="font-mono text-sm"
+                />
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">AI Assistant</h4>
+                <div className="space-y-3">
+                  <Input
+                    placeholder="Tell me how to modify this release (e.g., 'make it more casual', 'add technical details', 'change the tone')"
+                    value={editInstruction}
+                    onChange={(e) => setEditInstruction(e.target.value)}
+                  />
+                  <Button 
+                    onClick={() => editMutation.mutate({ id: editingRelease.id, instruction: editInstruction })}
+                    disabled={editMutation.isPending || !editInstruction.trim()}
+                    className="w-full"
+                  >
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    {editMutation.isPending ? "Updating..." : "Update with AI"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => saveEditMutation.mutate({ id: editingRelease.id, release: editingRelease.release })}
+                  disabled={saveEditMutation.isPending}
+                  className="flex-1"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {saveEditMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingRelease(null)}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

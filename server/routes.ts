@@ -30,16 +30,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertPressReleaseSchema.parse(req.body);
       
+      // First, generate a compelling headline
+      const headlinePrompt = `Generate a compelling, professional press release headline for the following:
+
+Company: ${validatedData.company}
+Main story/announcement: ${validatedData.copy}
+Context: ${validatedData.competitors || 'No additional context'}
+
+The headline should be:
+- Under 100 characters
+- Attention-grabbing and newsworthy
+- Professional and clear
+- Focused on the key announcement
+
+Return only the headline, no quotes or additional text.`;
+
+      const headlineCompletion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are an expert at writing compelling press release headlines. Generate only the headline, nothing else.' },
+          { role: 'user', content: headlinePrompt },
+        ],
+      });
+
+      const generatedHeadline = headlineCompletion.choices[0].message.content || '';
+
+      // Then generate the full press release
       const prompt = `Write a professional press release based on the following:
 
 Company: ${validatedData.company}
-Headline: ${validatedData.headline}
+Headline: ${generatedHeadline}
 Copy: ${validatedData.copy}
 PR Contact: ${validatedData.contact}
+Contact Email: ${validatedData.contactEmail}
+Contact Phone: ${validatedData.contactPhone}
 Quote: ${validatedData.quote || 'No quote provided'}
 Competitor Info: ${validatedData.competitors || 'No competitor information provided'}
 
-Structure it with a compelling headline, subheadline, main body, quote, and boilerplate. Make it professional and newsworthy.`;
+Structure it with the provided headline, subheadline, main body, quote, and boilerplate with proper contact information. Make it professional and newsworthy.`;
 
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o', // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
@@ -53,6 +81,7 @@ Structure it with a compelling headline, subheadline, main body, quote, and boil
       
       const pressRelease = await storage.createPressRelease({
         ...validatedData,
+        headline: generatedHeadline,
         release: generatedRelease,
       });
 
@@ -133,10 +162,7 @@ Please provide the updated press release content based on the user's instruction
 
       const updatedContent = completion.choices[0].message.content || currentContent;
       
-      res.json({ 
-        updatedContent,
-        changes: `Updated based on: ${instruction}`
-      });
+      res.json({ release: updatedContent });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
