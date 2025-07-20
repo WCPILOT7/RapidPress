@@ -168,7 +168,7 @@ export default function SimpleLanding() {
         </div>
 
         {/* Auth Section */}
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="w-full mx-auto">
           <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center pb-6">
               <CardTitle className="text-2xl sm:text-3xl font-bold">
@@ -183,9 +183,9 @@ export default function SimpleLanding() {
             </CardHeader>
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-5 px-4 sm:px-6 lg:px-8 pb-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                   {!isLogin && (
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2 md:col-span-2 lg:col-span-3">
                       <Label htmlFor="name">Full Name</Label>
                       <Input
                         id="name"
@@ -198,7 +198,7 @@ export default function SimpleLanding() {
                       />
                     </div>
                   )}
-                  <div className={`space-y-2 ${isLogin ? 'md:col-span-2' : ''}`}>
+                  <div className={`space-y-2 ${isLogin ? 'md:col-span-2 lg:col-span-3' : ''}`}>
                     <Label htmlFor="email">Email Address</Label>
                     <Input
                       id="email"
@@ -210,7 +210,7 @@ export default function SimpleLanding() {
                       className="h-12"
                     />
                   </div>
-                  <div className={`space-y-2 ${isLogin ? 'md:col-span-2' : ''}`}>
+                  <div className={`space-y-2 ${isLogin ? 'md:col-span-2 lg:col-span-3' : ''}`}>
                     <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
@@ -224,7 +224,7 @@ export default function SimpleLanding() {
                     />
                   </div>
                   {!isLogin && (
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2 md:col-span-2 lg:col-span-3">
                       <Label htmlFor="confirmPassword">Confirm Password</Label>
                       <Input
                         id="confirmPassword"
