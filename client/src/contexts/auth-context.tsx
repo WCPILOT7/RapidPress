@@ -54,28 +54,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await apiRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-    
-    setUser(response.user);
+    const response = await apiRequest('POST', '/api/auth/login', { email, password });
+    const data = await response.json();
+    setUser(data.user);
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const response = await apiRequest('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password }),
-    });
-    
-    setUser(response.user);
+    const response = await apiRequest('POST', '/api/auth/register', { name, email, password });
+    const data = await response.json();
+    setUser(data.user);
   };
 
   const logout = async () => {
-    await apiRequest('/api/auth/logout', {
-      method: 'POST',
-    });
-    
+    await apiRequest('POST', '/api/auth/logout');
     setUser(null);
   };
 
