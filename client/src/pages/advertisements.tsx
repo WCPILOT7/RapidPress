@@ -57,12 +57,43 @@ export default function Advertisements() {
   const createAdMutation = useMutation({
     mutationFn: async (data: { pressReleaseId: number; platform: string; type: string }) => {
       console.log('Creating advertisement with data:', data);
-      const response = await apiRequest('POST', '/api/advertisements', data);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+      try {
+        // Add timeout handling for long-running AI operations
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+        
+        const response = await fetch('/api/advertisements', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { error: errorText || `HTTP ${response.status}` };
+          }
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('Advertisement created successfully:', result);
+        return result;
+      } catch (error: any) {
+        console.error('Detailed error:', error);
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again.');
+        }
+        throw error;
       }
-      return response.json();
     },
     onSuccess: (data) => {
       console.log('Advertisement created successfully:', data);
@@ -397,10 +428,17 @@ export default function Advertisements() {
                 <div className="flex space-x-2 pt-4">
                   <Button 
                     onClick={handleCreateAd} 
-                    disabled={createAdMutation.isPending}
+                    disabled={createAdMutation.isPending || !selectedPressRelease || !selectedPlatform || !selectedType}
                     className="flex-1"
                   >
-                    {createAdMutation.isPending ? "Creating..." : "Create"}
+                    {createAdMutation.isPending ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creating (30-60s)...
+                      </div>
+                    ) : (
+                      "Create"
+                    )}
                   </Button>
                   <Button 
                     variant="outline" 
