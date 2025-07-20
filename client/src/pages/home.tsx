@@ -42,13 +42,9 @@ export default function Home() {
   const { user, isLoading } = useAuth();
   const queryClient = useQueryClient();
 
-  // Check if we're in development bypass mode
-  const urlParams = new URLSearchParams(window.location.search);
-  const isDev = urlParams.get('bypass') === 'true';
-
-  // Redirect to login if unauthorized (but not in dev bypass mode)
+  // Redirect to login if unauthorized
   useEffect(() => {
-    if (!isDev && !isLoading && !user) {
+    if (!isLoading && !user) {
       toast({
         title: "Unauthorized",
         description: "You are logged out. Logging in again...",
@@ -59,7 +55,7 @@ export default function Home() {
       }, 500);
       return;
     }
-  }, [user, isLoading, toast, isDev]);
+  }, [user, isLoading, toast]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -249,7 +245,7 @@ export default function Home() {
               </nav>
             </div>
             <div className="flex items-center space-x-4">
-              {user ? (
+              {user && (
                 <>
                   <div className="text-sm text-gray-500">
                     Welcome back, {(user as User).firstName || (user as User).email}
@@ -276,11 +272,7 @@ export default function Home() {
                     Logout
                   </Button>
                 </>
-              ) : isDev ? (
-                <div className="text-sm text-gray-500 bg-yellow-100 px-3 py-1 rounded">
-                  Dev Mode (Bypass Enabled)
-                </div>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
