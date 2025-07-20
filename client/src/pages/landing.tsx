@@ -52,7 +52,7 @@ export default function Landing() {
       } else {
         await register(name, email, password);
         toast({
-          title: 'Welcome to PR Studio!',
+          title: 'Welcome!',
           description: 'Your account has been created successfully.',
         });
       }
@@ -76,13 +76,13 @@ export default function Landing() {
     },
     {
       icon: <Users className="h-6 w-6 text-green-600" />,
-      title: "Contact Management",
-      description: "Upload and manage your media contacts with CSV import and organization tools"
+      title: "Instant Distribution",
+      description: "Upload and manage your media contacts or get access to top lists"
     },
     {
       icon: <Share2 className="h-6 w-6 text-purple-600" />,
       title: "Multi-Platform Distribution",
-      description: "Generate targeted advertisements for social media and various platforms"
+      description: "Generate instant advertisements for social media and various platforms"
     },
     {
       icon: <Clock className="h-6 w-6 text-orange-600" />,
@@ -111,7 +111,7 @@ export default function Landing() {
             <span className="ml-2">#1 AI Press Release Platform</span>
           </div>
           <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
-            Transform Your PR Strategy with{' '}
+            Energise Your PR Strategy with{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
               AI-Powered
             </span>{' '}

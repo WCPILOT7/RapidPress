@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Newspaper, FileText, Users, Send, Share2, Wand2, Eye, Trash2, Upload, Edit, Save, X } from "lucide-react";
+import { Newspaper, FileText, Users, Send, Share2, Wand2, Eye, Trash2, Upload, Edit, Save, X, ChevronRight, ChevronLeft, Building, User, Calendar, Palette, FileText as FileTextIcon, Quote, Trophy } from "lucide-react";
 import { Link } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -36,8 +36,41 @@ export default function Home() {
   const [generatedRelease, setGeneratedRelease] = useState<any>(null);
   const [editingRelease, setEditingRelease] = useState<PressRelease | null>(null);
   const [editInstruction, setEditInstruction] = useState("");
+  const [currentStep, setCurrentStep] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Define the steps for the wizard
+  const formSteps = [
+    {
+      id: 0,
+      title: "Company Info",
+      description: "Basic company details",
+      icon: Building,
+      fields: ["company", "contact", "contactEmail", "contactPhone", "date"]
+    },
+    {
+      id: 1,
+      title: "Brand Voice",
+      description: "Tone and guidelines",
+      icon: Palette,
+      fields: ["brandTone"]
+    },
+    {
+      id: 2,
+      title: "Content",
+      description: "Main story and details",
+      icon: FileTextIcon,
+      fields: ["copy"]
+    },
+    {
+      id: 3,
+      title: "Quotes & Context",
+      description: "Executive quotes and competition",
+      icon: Quote,
+      fields: ["quote", "competitors"]
+    }
+  ];
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -126,6 +159,35 @@ export default function Home() {
 
   const onSubmit = (data: FormData) => {
     generateMutation.mutate(data);
+  };
+
+  // Helper functions for step navigation
+  const isStepValid = (stepIndex: number) => {
+    const step = formSteps[stepIndex];
+    const requiredFields = step.fields.filter(field => 
+      ["company", "copy", "contact", "contactEmail", "contactPhone", "date"].includes(field)
+    );
+    
+    return requiredFields.every(field => {
+      const value = form.getValues(field as keyof FormData);
+      return value && value.trim() !== "";
+    });
+  };
+
+  const goToNextStep = () => {
+    if (currentStep < formSteps.length - 1 && isStepValid(currentStep)) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const goToPrevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const goToStep = (stepIndex: number) => {
+    setCurrentStep(stepIndex);
   };
 
   // History functionality
@@ -235,164 +297,304 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card>
-                <CardContent className="p-6">
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                      <div className="grid grid-cols-1 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="company"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Company Name *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter your company name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="contact"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>PR Contact Name *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Contact person name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  {/* Step Progress Bar */}
+                  <div className="bg-gray-50 px-6 py-4 border-b">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Step {currentStep + 1} of {formSteps.length}</h3>
+                      <div className="text-sm text-gray-500">{Math.round(((currentStep + 1) / formSteps.length) * 100)}% Complete</div>
+                    </div>
+                    
+                    {/* Progress bar */}
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                      <div 
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${((currentStep + 1) / formSteps.length) * 100}%` }}
+                      ></div>
+                    </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="contactEmail"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Contact Email *</FormLabel>
-                              <FormControl>
-                                <Input type="email" placeholder="contact@company.com" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="contactPhone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Contact Phone *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="+1 (555) 123-4567" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                    {/* Step indicators */}
+                    <div className="flex items-center justify-between">
+                      {formSteps.map((step, index) => {
+                        const Icon = step.icon;
+                        const isActive = index === currentStep;
+                        const isCompleted = index < currentStep;
+                        const isAccessible = index <= currentStep || (index === currentStep + 1 && isStepValid(currentStep));
+                        
+                        return (
+                          <button
+                            key={step.id}
+                            onClick={() => isAccessible ? goToStep(index) : null}
+                            className={`flex flex-col items-center space-y-2 p-2 rounded-lg transition-all duration-200 ${
+                              isActive 
+                                ? 'bg-blue-100 text-blue-600 scale-110' 
+                                : isCompleted
+                                ? 'text-green-600 hover:bg-green-50'
+                                : isAccessible
+                                ? 'text-gray-500 hover:bg-gray-100 cursor-pointer'
+                                : 'text-gray-300 cursor-not-allowed'
+                            }`}
+                            disabled={!isAccessible}
+                          >
+                            <div className={`rounded-full p-2 ${
+                              isActive 
+                                ? 'bg-blue-600 text-white' 
+                                : isCompleted
+                                ? 'bg-green-600 text-white'
+                                : isAccessible
+                                ? 'bg-gray-200 text-gray-600'
+                                : 'bg-gray-100 text-gray-300'
+                            }`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="text-xs font-medium text-center">
+                              <div>{step.title}</div>
+                              <div className="text-gray-400 text-xs">{step.description}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                      <FormField
-                        control={form.control}
-                        name="date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Release Date *</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                  {/* Form Content */}
+                  <div className="p-6">
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        {/* Step 0: Company Info */}
+                        {currentStep === 0 && (
+                          <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="text-center mb-6">
+                              <Building className="w-12 h-12 text-blue-600 mx-auto mb-3" />
+                              <h3 className="text-xl font-bold text-gray-900">Company Information</h3>
+                              <p className="text-gray-600">Let's start with basic details about your company</p>
+                            </div>
 
-                      <FormField
-                        control={form.control}
-                        name="brandTone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Brand Tone, Voice & Guidelines</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                rows={4}
-                                placeholder="Describe your brand's tone of voice, writing style, guidelines, and company boilerplate details. Include any standard company descriptions, mission statements, or key messaging you want incorporated (e.g., formal, casual, technical, friendly, etc.)..."
-                                {...field}
+                            <div className="grid grid-cols-1 gap-6">
+                              <FormField
+                                control={form.control}
+                                name="company"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Company Name *</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="Enter your company name" {...field} className="h-12" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
                               />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="copy"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Main Copy *</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                rows={4}
-                                placeholder="Describe the key information, announcement, or story..."
-                                {...field}
+                              <FormField
+                                control={form.control}
+                                name="contact"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>PR Contact Name *</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="Contact person name" {...field} className="h-12" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
                               />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                            </div>
 
-                      <FormField
-                        control={form.control}
-                        name="quote"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Executive Quote</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                rows={3}
-                                placeholder="Quote from company executive or spokesperson..."
-                                {...field}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField
+                                control={form.control}
+                                name="contactEmail"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Contact Email *</FormLabel>
+                                    <FormControl>
+                                      <Input type="email" placeholder="contact@company.com" {...field} className="h-12" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
                               />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="competitors"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Competitor Information</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                rows={2}
-                                placeholder="Any competitive context or market positioning..."
-                                {...field}
+                              <FormField
+                                control={form.control}
+                                name="contactPhone"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Contact Phone *</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="+1 (555) 123-4567" {...field} className="h-12" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
                               />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                            </div>
 
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={generateMutation.isPending}
-                      >
-                        <Wand2 className="w-4 h-4 mr-2" />
-                        {generateMutation.isPending ? "Generating..." : "Generate Press Release"}
-                      </Button>
-                    </form>
-                  </Form>
+                            <FormField
+                              control={form.control}
+                              name="date"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Release Date *</FormLabel>
+                                  <FormControl>
+                                    <Input type="date" {...field} className="h-12" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+
+                        {/* Step 1: Brand Voice */}
+                        {currentStep === 1 && (
+                          <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="text-center mb-6">
+                              <Palette className="w-12 h-12 text-purple-600 mx-auto mb-3" />
+                              <h3 className="text-xl font-bold text-gray-900">Brand Voice & Guidelines</h3>
+                              <p className="text-gray-600">Help us understand your brand's tone and style</p>
+                            </div>
+
+                            <FormField
+                              control={form.control}
+                              name="brandTone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Brand Tone, Voice & Guidelines</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      rows={6}
+                                      placeholder="Describe your brand's tone of voice, writing style, guidelines, and company boilerplate details. Include any standard company descriptions, mission statements, or key messaging you want incorporated (e.g., formal, casual, technical, friendly, etc.)..."
+                                      {...field}
+                                      className="resize-none"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+
+                        {/* Step 2: Content */}
+                        {currentStep === 2 && (
+                          <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="text-center mb-6">
+                              <FileTextIcon className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                              <h3 className="text-xl font-bold text-gray-900">Main Content</h3>
+                              <p className="text-gray-600">Tell us about your announcement or story</p>
+                            </div>
+
+                            <FormField
+                              control={form.control}
+                              name="copy"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Main Copy *</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      rows={6}
+                                      placeholder="Describe the key information, announcement, or story. Include important details like what's being announced, why it's significant, key benefits, and any relevant background information..."
+                                      {...field}
+                                      className="resize-none"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+
+                        {/* Step 3: Quotes & Context */}
+                        {currentStep === 3 && (
+                          <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="text-center mb-6">
+                              <Quote className="w-12 h-12 text-orange-600 mx-auto mb-3" />
+                              <h3 className="text-xl font-bold text-gray-900">Quotes & Context</h3>
+                              <p className="text-gray-600">Add executive quotes and competitive context</p>
+                            </div>
+
+                            <FormField
+                              control={form.control}
+                              name="quote"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Executive Quote</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      rows={4}
+                                      placeholder="Quote from company executive or spokesperson..."
+                                      {...field}
+                                      className="resize-none"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="competitors"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Competitor Information</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      rows={3}
+                                      placeholder="Any competitive context or market positioning..."
+                                      {...field}
+                                      className="resize-none"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+
+                        {/* Navigation Buttons */}
+                        <div className="flex items-center justify-between pt-6 border-t">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={goToPrevStep}
+                            disabled={currentStep === 0}
+                            className="flex items-center"
+                          >
+                            <ChevronLeft className="w-4 h-4 mr-2" />
+                            Previous
+                          </Button>
+
+                          <div className="text-sm text-gray-500">
+                            Step {currentStep + 1} of {formSteps.length}
+                          </div>
+
+                          {currentStep < formSteps.length - 1 ? (
+                            <Button
+                              type="button"
+                              onClick={goToNextStep}
+                              disabled={!isStepValid(currentStep)}
+                              className="flex items-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                            >
+                              Next
+                              <ChevronRight className="w-4 h-4 ml-2" />
+                            </Button>
+                          ) : (
+                            <Button
+                              type="submit"
+                              disabled={generateMutation.isPending || !isStepValid(currentStep)}
+                              className="flex items-center bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                            >
+                              <Wand2 className="w-4 h-4 mr-2" />
+                              {generateMutation.isPending ? "Generating..." : "Generate Press Release"}
+                            </Button>
+                          )}
+                        </div>
+                      </form>
+                    </Form>
+                  </div>
                 </CardContent>
               </Card>
 
