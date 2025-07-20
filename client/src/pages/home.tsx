@@ -158,36 +158,76 @@ export default function Home() {
   });
 
   const onSubmit = (data: FormData) => {
-    generateMutation.mutate(data);
+    try {
+      generateMutation.mutate(data);
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast({
+        title: "Submission Error",
+        description: "Unable to submit form. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Helper functions for step navigation
   const isStepValid = (stepIndex: number) => {
-    const step = formSteps[stepIndex];
-    const requiredFields = step.fields.filter(field => 
-      ["company", "copy", "contact", "contactEmail", "contactPhone", "date"].includes(field)
-    );
-    
-    return requiredFields.every(field => {
-      const value = form.getValues(field as keyof FormData);
-      return value && value.trim() !== "";
-    });
+    try {
+      const step = formSteps[stepIndex];
+      if (!step) return false;
+      
+      const requiredFields = step.fields.filter(field => 
+        ["company", "copy", "contact", "contactEmail", "contactPhone", "date"].includes(field)
+      );
+      
+      return requiredFields.every(field => {
+        try {
+          const value = form.getValues(field as keyof FormData);
+          return value && typeof value === 'string' && value.trim() !== "";
+        } catch (error) {
+          console.warn(`Error getting form value for field ${field}:`, error);
+          return false;
+        }
+      });
+    } catch (error) {
+      console.error('Error in isStepValid:', error);
+      return false;
+    }
   };
 
   const goToNextStep = () => {
-    if (currentStep < formSteps.length - 1 && isStepValid(currentStep)) {
-      setCurrentStep(currentStep + 1);
+    try {
+      if (currentStep < formSteps.length - 1 && isStepValid(currentStep)) {
+        setCurrentStep(currentStep + 1);
+      }
+    } catch (error) {
+      console.error('Error navigating to next step:', error);
+      toast({
+        title: "Navigation Error",
+        description: "Unable to proceed to next step. Please check your form inputs.",
+        variant: "destructive",
+      });
     }
   };
 
   const goToPrevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+    try {
+      if (currentStep > 0) {
+        setCurrentStep(currentStep - 1);
+      }
+    } catch (error) {
+      console.error('Error navigating to previous step:', error);
     }
   };
 
   const goToStep = (stepIndex: number) => {
-    setCurrentStep(stepIndex);
+    try {
+      if (stepIndex >= 0 && stepIndex < formSteps.length) {
+        setCurrentStep(stepIndex);
+      }
+    } catch (error) {
+      console.error('Error navigating to step:', error);
+    }
   };
 
   // History functionality

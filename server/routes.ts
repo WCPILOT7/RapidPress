@@ -68,10 +68,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
+    name: 'connect.sid', // Explicit session cookie name
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // Always false in development (Replit uses HTTP)
       httpOnly: true,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      sameSite: 'lax', // Allow same-site requests
     },
   }));
 
