@@ -511,7 +511,8 @@ Please provide the updated content based on the user's instruction. Keep it appr
         if (imageUrl) {
           const updatedAdvertisement = await storage.updateAdvertisement(id, { 
             imageUrl,
-            imagePrompt: imagePrompt || existingAd.imagePrompt
+            imagePrompt: imagePrompt || existingAd.imagePrompt,
+            isCustomImage: false // Reset to AI-generated
           });
           res.json(updatedAdvertisement);
         } else {
@@ -522,6 +523,35 @@ Please provide the updated content based on the user's instruction. Keep it appr
         res.status(500).json({ error: 'Image generation failed' });
       }
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Upload custom image for advertisement
+  app.post('/api/advertisements/:id/upload-image', upload.single('image'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      const existingAd = await storage.getAdvertisementById(id);
+      if (!existingAd) {
+        return res.status(404).json({ error: 'Advertisement not found' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image file provided' });
+      }
+
+      // Store the relative path for the uploaded image
+      const imageUrl = `/uploads/${req.file.filename}`;
+      
+      const updatedAdvertisement = await storage.updateAdvertisement(id, { 
+        imageUrl,
+        isCustomImage: true
+      });
+      
+      res.json(updatedAdvertisement);
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
       res.status(500).json({ error: error.message });
     }
   });

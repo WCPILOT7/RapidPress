@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Share2, Facebook, Twitter, Linkedin, Instagram, Monitor, Plus, Trash2, Copy, Eye, Newspaper, ArrowLeft, Edit, Save, X, RefreshCw, Image as ImageIcon } from "lucide-react";
+import { useState, useRef } from "react";
+import { Share2, Facebook, Twitter, Linkedin, Instagram, Monitor, Plus, Trash2, Copy, Eye, Newspaper, ArrowLeft, Edit, Save, X, RefreshCw, Image as ImageIcon, Upload } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -41,6 +41,9 @@ export default function Advertisements() {
   const [editedTitle, setEditedTitle] = useState("");
   const [aiInstruction, setAiInstruction] = useState("");
   const [isAiEditMode, setIsAiEditMode] = useState(false);
+  const [editingImagePrompt, setEditingImagePrompt] = useState("");
+  const [isImageEditMode, setIsImageEditMode] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -198,11 +201,47 @@ export default function Advertisements() {
         description: "Image regenerated successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/advertisements"] });
+      setIsImageEditMode(false);
+      setEditingImagePrompt("");
     },
     onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to regenerate image",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Upload custom image mutation
+  const uploadImageMutation = useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch(`/api/advertisements/${id}/upload-image`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/advertisements"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload image",
         variant: "destructive",
       });
     },
@@ -237,6 +276,8 @@ export default function Advertisements() {
     setEditedTitle(ad.title);
     setAiInstruction("");
     setIsAiEditMode(false);
+    setEditingImagePrompt(ad.imagePrompt || "");
+    setIsImageEditMode(false);
   };
 
   const handleSaveEdit = () => {
@@ -265,8 +306,27 @@ export default function Advertisements() {
     });
   };
 
-  const handleRegenerateImage = (ad: Advertisement) => {
-    regenerateImageMutation.mutate({ id: ad.id });
+  const handleRegenerateImage = (ad: Advertisement, customPrompt?: string) => {
+    regenerateImageMutation.mutate({ 
+      id: ad.id, 
+      imagePrompt: customPrompt || ad.imagePrompt || undefined
+    });
+  };
+
+  const handleImageUpload = (ad: Advertisement, file: File) => {
+    uploadImageMutation.mutate({ id: ad.id, file });
+  };
+
+  const handleFileSelect = (ad: Advertisement) => {
+    if (fileInputRef.current) {
+      fileInputRef.current.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          handleImageUpload(ad, file);
+        }
+      };
+      fileInputRef.current.click();
+    }
   };
 
   const copyToClipboard = (content: string) => {
@@ -347,6 +407,14 @@ export default function Advertisements() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Hidden file input for image uploads */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+        />
+        
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Advertisements</h1>
@@ -503,21 +571,37 @@ export default function Advertisements() {
                   <CardContent>
                     <div className="space-y-3">
                       {ad.imageUrl && (
-                        <div className="relative">
+                        <div className="relative group">
                           <img 
                             src={ad.imageUrl} 
                             alt="Generated advertisement image"
                             className="w-full h-32 object-cover rounded-lg"
                           />
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleRegenerateImage(ad)}
-                            disabled={regenerateImageMutation.isPending}
-                            className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-                          >
-                            <RefreshCw className={`w-3 h-3 ${regenerateImageMutation.isPending ? 'animate-spin' : ''}`} />
-                          </Button>
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleRegenerateImage(ad)}
+                              disabled={regenerateImageMutation.isPending || uploadImageMutation.isPending}
+                              className="bg-white/90 hover:bg-white"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${regenerateImageMutation.isPending ? 'animate-spin' : ''}`} />
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleFileSelect(ad)}
+                              disabled={regenerateImageMutation.isPending || uploadImageMutation.isPending}
+                              className="bg-white/90 hover:bg-white"
+                            >
+                              <Upload className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          {(ad as any).isCustomImage && (
+                            <Badge className="absolute top-2 left-2 bg-blue-600 text-white text-xs">
+                              Custom
+                            </Badge>
+                          )}
                         </div>
                       )}
                       
@@ -572,7 +656,7 @@ export default function Advertisements() {
                             disabled={regenerateImageMutation.isPending}
                             className="w-full"
                           >
-                            <ImageIcon className="w-4 h-4 mr-1" />
+                            <RefreshCw className={`w-4 h-4 mr-1 ${regenerateImageMutation.isPending ? 'animate-spin' : ''}`} />
                             New Image
                           </Button>
                         )}
@@ -611,10 +695,36 @@ export default function Advertisements() {
 
                 {viewingAd.imageUrl && (
                   <div>
-                    <h4 className="font-medium mb-2">Generated Image:</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium">
+                        {(viewingAd as any).isCustomImage ? 'Custom Image:' : 'Generated Image:'}
+                      </h4>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFileSelect(viewingAd)}
+                          disabled={uploadImageMutation.isPending}
+                        >
+                          <Upload className="w-4 h-4 mr-1" />
+                          Upload New
+                        </Button>
+                        {!((viewingAd as any).isCustomImage) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRegenerateImage(viewingAd)}
+                            disabled={regenerateImageMutation.isPending}
+                          >
+                            <RefreshCw className={`w-4 h-4 mr-1 ${regenerateImageMutation.isPending ? 'animate-spin' : ''}`} />
+                            Regenerate
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                     <img 
                       src={viewingAd.imageUrl} 
-                      alt="Generated advertisement image"
+                      alt="Advertisement image"
                       className="w-full max-w-md mx-auto rounded-lg border"
                     />
                   </div>
@@ -696,6 +806,20 @@ export default function Advertisements() {
                     >
                       AI Edit
                     </Button>
+                    {editingAd.imageUrl && (
+                      <Button
+                        variant={isImageEditMode ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setIsImageEditMode(!isImageEditMode);
+                          if (!isImageEditMode) {
+                            setEditingImagePrompt(editingAd.imagePrompt || '');
+                          }
+                        }}
+                      >
+                        Edit Image
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -743,6 +867,69 @@ export default function Advertisements() {
                       >
                         {aiEditMutation.isPending ? "Processing..." : "Apply AI Edit"}
                       </Button>
+                    </div>
+                  </div>
+                )}
+
+                {isImageEditMode && editingAd.imageUrl && (
+                  <div className="border-t pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Image Options
+                    </label>
+                    
+                    <div className="space-y-4">
+                      <div className="flex justify-center">
+                        <img 
+                          src={editingAd.imageUrl} 
+                          alt="Current advertisement image"
+                          className="w-48 h-32 object-cover rounded-lg border"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => handleFileSelect(editingAd)}
+                          disabled={uploadImageMutation.isPending}
+                          className="w-full"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {uploadImageMutation.isPending ? "Uploading..." : "Upload Custom"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleRegenerateImage(editingAd)}
+                          disabled={regenerateImageMutation.isPending}
+                          className="w-full"
+                        >
+                          <RefreshCw className={`w-4 h-4 mr-2 ${regenerateImageMutation.isPending ? 'animate-spin' : ''}`} />
+                          {regenerateImageMutation.isPending ? "Generating..." : "Regenerate"}
+                        </Button>
+                      </div>
+                      
+                      {!((editingAd as any).isCustomImage) && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Custom Image Prompt
+                          </label>
+                          <div className="space-y-2">
+                            <Textarea
+                              value={editingImagePrompt}
+                              onChange={(e) => setEditingImagePrompt(e.target.value)}
+                              placeholder="Describe how you want the image to look (e.g., 'make it more colorful', 'add a cityscape background', 'modern minimalist style')"
+                              rows={3}
+                              className="resize-none"
+                            />
+                            <Button
+                              onClick={() => handleRegenerateImage(editingAd, editingImagePrompt)}
+                              disabled={regenerateImageMutation.isPending || !editingImagePrompt.trim()}
+                              className="w-full"
+                            >
+                              {regenerateImageMutation.isPending ? "Generating..." : "Generate with Custom Prompt"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

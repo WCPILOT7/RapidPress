@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -33,6 +33,7 @@ export const advertisements = pgTable("advertisements", {
   type: text("type").notNull(), // "social_media", "ad"
   imagePrompt: text("image_prompt"),
   imageUrl: text("image_url"),
+  isCustomImage: boolean("is_custom_image").default(false), // true if user uploaded their own image
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
