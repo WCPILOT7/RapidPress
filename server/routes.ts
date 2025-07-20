@@ -49,11 +49,21 @@ const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunctio
 };
 
 const attachUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  // Debug session information
+  console.log('Session ID:', req.sessionID);
+  console.log('Session userId:', req.session?.userId);
+  console.log('Cookie header:', req.headers.cookie);
+  
   if (req.session?.userId) {
     const user = await storage.getUserById(req.session.userId);
     if (user) {
       req.user = { id: user.id, email: user.email, name: user.name };
+      console.log('User attached:', req.user);
+    } else {
+      console.log('User not found for ID:', req.session.userId);
     }
+  } else {
+    console.log('No session userId found');
   }
   next();
 };
@@ -67,13 +77,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
-    saveUninitialized: false,
-    name: 'connect.sid', // Explicit session cookie name
+    saveUninitialized: true, // Create session even for unauthenticated requests
+    rolling: true, // Reset expiration on activity
+    name: 'connect.sid',
     cookie: {
-      secure: false, // Always false in development (Replit uses HTTP)
-      httpOnly: true,
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      sameSite: 'lax', // Allow same-site requests
+      secure: false, // Never use secure in development
+      httpOnly: false, // Allow JavaScript access for debugging
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: false, // Allow cross-origin cookies
+      path: '/', // Ensure cookie is available for all paths
     },
   }));
 
