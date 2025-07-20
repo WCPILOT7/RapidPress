@@ -6,22 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Users, 
-  Share2, 
-  Zap, 
-  Shield, 
-  Clock, 
-  CheckCircle,
-  ArrowRight,
-  Sparkles
-} from 'lucide-react';
 
-export default function Landing() {
+export default function SimpleLanding() {
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('test@example.com');
+  const [password, setPassword] = useState('password123');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login, register } = useAuth();
@@ -68,43 +58,10 @@ export default function Landing() {
     }
   };
 
-  const features = [
-    {
-      icon: <Sparkles className="h-6 w-6 text-blue-600" />,
-      title: "AI-Powered Generation",
-      description: "Create professional press releases in seconds with advanced AI technology"
-    },
-    {
-      icon: <Users className="h-6 w-6 text-green-600" />,
-      title: "Contact Management",
-      description: "Upload and manage your media contacts with CSV import and organization tools"
-    },
-    {
-      icon: <Share2 className="h-6 w-6 text-purple-600" />,
-      title: "Multi-Platform Distribution",
-      description: "Generate targeted advertisements for social media and various platforms"
-    },
-    {
-      icon: <Clock className="h-6 w-6 text-orange-600" />,
-      title: "Save Hours of Work",
-      description: "Automate your PR workflow and focus on strategy instead of manual writing"
-    },
-    {
-      icon: <Shield className="h-6 w-6 text-red-600" />,
-      title: "Secure & Private",
-      description: "Your data is protected with enterprise-grade security and user isolation"
-    },
-    {
-      icon: <Zap className="h-6 w-6 text-yellow-600" />,
-      title: "Lightning Fast",
-      description: "Generate, edit, and distribute content faster than traditional methods"
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
+        {/* Hero Section */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold mb-4 bg-yellow-50 border-yellow-200">
             <span className="text-yellow-600">⭐</span>
@@ -121,39 +78,51 @@ export default function Landing() {
             Generate professional press releases, manage media contacts, and create targeted 
             advertisements in minutes. Trusted by PR professionals worldwide.
           </p>
-          <div className="flex items-center justify-center space-x-8 text-sm text-gray-500 mb-12">
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              No credit card required
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              Free to start
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              Setup in 30 seconds
-            </div>
-          </div>
         </div>
 
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          {features.map((feature, index) => (
-            <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardHeader className="pb-4">
-                <div className="mb-4">
-                  {feature.icon}
-                </div>
-                <CardTitle className="text-xl">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-gray-600 leading-relaxed">
-                  {feature.description}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-4">
+              <div className="mb-4">
+                <span className="text-2xl">✨</span>
+              </div>
+              <CardTitle className="text-xl">AI-Powered Generation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-gray-600 leading-relaxed">
+                Create professional press releases in seconds with advanced AI technology
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-4">
+              <div className="mb-4">
+                <span className="text-2xl">👥</span>
+              </div>
+              <CardTitle className="text-xl">Contact Management</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-gray-600 leading-relaxed">
+                Upload and manage your media contacts with CSV import and organization tools
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-4">
+              <div className="mb-4">
+                <span className="text-2xl">🚀</span>
+              </div>
+              <CardTitle className="text-xl">Multi-Platform Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-gray-600 leading-relaxed">
+                Generate targeted advertisements for social media and various platforms
+              </CardDescription>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Auth Section */}
@@ -232,14 +201,7 @@ export default function Landing() {
                   className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" 
                   disabled={isLoading}
                 >
-                  {isLoading ? (
-                    'Processing...'
-                  ) : (
-                    <>
-                      {isLogin ? 'Sign In' : 'Create Account'}
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </>
-                  )}
+                  {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
                 </Button>
 
                 {isLogin && (
@@ -265,17 +227,6 @@ export default function Landing() {
               </CardContent>
             </form>
           </Card>
-        </div>
-
-        {/* Social Proof */}
-        <div className="text-center mt-16">
-          <p className="text-gray-500 text-sm mb-4">Trusted by professionals at</p>
-          <div className="flex items-center justify-center space-x-8 opacity-60">
-            <div className="text-lg font-semibold text-gray-400">TechCorp</div>
-            <div className="text-lg font-semibold text-gray-400">MediaFlow</div>
-            <div className="text-lg font-semibold text-gray-400">StartupLab</div>
-            <div className="text-lg font-semibold text-gray-400">InnovatePR</div>
-          </div>
         </div>
       </div>
     </div>

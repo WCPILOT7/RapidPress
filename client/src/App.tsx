@@ -9,7 +9,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Advertisements from "@/pages/advertisements";
-import Landing from "@/pages/landing";
+import SimpleLanding from "@/pages/simple-landing";
 
 function Router() {
   return (
@@ -26,7 +26,7 @@ function Router() {
           <Advertisements />
         </ProtectedRoute>
       </Route>
-      <Route path="/" component={Landing} />
+      <Route path="/" component={SimpleLanding} />
     </Switch>
   );
 }
