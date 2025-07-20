@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Landing from "@/pages/landing";
 import Advertisements from "@/pages/advertisements";
+import Test from "@/pages/test";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -16,18 +17,11 @@ function Router() {
   const urlParams = new URLSearchParams(window.location.search);
   const isDev = urlParams.get('bypass') === 'true';
 
+  // Simple routing debug - just show the test component for now
   return (
-    <Switch>
-      {!isDev && (isLoading || !isAuthenticated) ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-          <Route path="/advertisements" component={Advertisements} />
-        </>
-      )}
-      <Route component={NotFound} />
-    </Switch>
+    <div>
+      <Test />
+    </div>
   );
 }
 
