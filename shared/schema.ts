@@ -24,6 +24,8 @@ export const pressReleases = pgTable("press_releases", {
   quote: text("quote"),
   competitors: text("competitors"),
   release: text("release").notNull(),
+  language: text("language").default("English").notNull(),
+  originalId: integer("original_id"), // Reference to original press release if this is a translation
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

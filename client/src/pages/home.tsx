@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Newspaper, FileText, Users, Send, Share2, Wand2, Eye, Trash2, Upload, Edit, Save, X, ChevronRight, ChevronLeft, Building, User, Calendar, Palette, FileText as FileTextIcon, Quote, Trophy } from "lucide-react";
+import { Newspaper, FileText, Users, Send, Share2, Wand2, Eye, Trash2, Upload, Edit, Save, X, ChevronRight, ChevronLeft, Building, User, Calendar, Palette, FileText as FileTextIcon, Quote, Trophy, Languages } from "lucide-react";
 import { Link } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { PressRelease } from "@shared/schema";
@@ -37,6 +38,7 @@ export default function Home() {
   const [editingRelease, setEditingRelease] = useState<PressRelease | null>(null);
   const [editInstruction, setEditInstruction] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -183,6 +185,48 @@ export default function Home() {
       form.handleSubmit(onSubmit)();
     }
   };
+
+  // Translation mutation
+  const translateMutation = useMutation({
+    mutationFn: async ({ id, language }: { id: number, language: string }) => {
+      const response = await apiRequest('POST', `/api/releases/${id}/translate`, { language });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Success",
+        description: `Press release translated to ${selectedLanguage} successfully!`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/releases"] });
+      setSelectedLanguage("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to translate press release",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Common languages for translation
+  const languages = [
+    { code: "Spanish", name: "Spanish" },
+    { code: "French", name: "French" },
+    { code: "German", name: "German" },
+    { code: "Italian", name: "Italian" },
+    { code: "Portuguese", name: "Portuguese" },
+    { code: "Chinese", name: "Chinese (Simplified)" },
+    { code: "Japanese", name: "Japanese" },
+    { code: "Korean", name: "Korean" },
+    { code: "Arabic", name: "Arabic" },
+    { code: "Russian", name: "Russian" },
+    { code: "Dutch", name: "Dutch" },
+    { code: "Swedish", name: "Swedish" },
+    { code: "Norwegian", name: "Norwegian" },
+    { code: "Danish", name: "Danish" },
+    { code: "Finnish", name: "Finnish" },
+  ];
 
   // Helper functions for step navigation
   const isStepValid = (stepIndex: number) => {
@@ -687,6 +731,47 @@ export default function Home() {
                           <Edit className="w-4 h-4 mr-2" />
                           Edit
                         </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline">
+                              <Languages className="w-4 h-4 mr-2" />
+                              Translate
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Translate Press Release</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <p className="text-sm text-gray-600">
+                                Select a language to translate this press release. A new translated version will be created and saved.
+                              </p>
+                              <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select language" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {languages.map((lang) => (
+                                    <SelectItem key={lang.code} value={lang.code}>
+                                      {lang.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                onClick={() => {
+                                  if (selectedLanguage && generatedRelease) {
+                                    translateMutation.mutate({ id: generatedRelease.id, language: selectedLanguage });
+                                  }
+                                }}
+                                disabled={!selectedLanguage || translateMutation.isPending}
+                                className="w-full"
+                              >
+                                {translateMutation.isPending ? "Translating..." : "Create Translation"}
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </div>
                   ) : (
@@ -727,6 +812,9 @@ export default function Home() {
                           <CardTitle className="text-lg font-semibold mb-2">{release.headline}</CardTitle>
                           <div className="flex items-center gap-4 text-sm text-gray-500">
                             <Badge variant="outline">{release.company}</Badge>
+                            <Badge variant={release.language === "English" ? "default" : "secondary"}>
+                              {release.language || "English"}
+                            </Badge>
                             <span>Created {format(new Date(release.createdAt), "MMM dd, yyyy 'at' h:mm a")}</span>
                           </div>
                         </div>
@@ -750,6 +838,47 @@ export default function Home() {
                             <Edit className="w-4 h-4 mr-2" />
                             Edit
                           </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Languages className="w-4 h-4 mr-2" />
+                                Translate
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Translate Press Release</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <p className="text-sm text-gray-600">
+                                  Select a language to translate "{release.headline}". A new translated version will be created and saved.
+                                </p>
+                                <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select language" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {languages.map((lang) => (
+                                      <SelectItem key={lang.code} value={lang.code}>
+                                        {lang.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button
+                                  onClick={() => {
+                                    if (selectedLanguage) {
+                                      translateMutation.mutate({ id: release.id, language: selectedLanguage });
+                                    }
+                                  }}
+                                  disabled={!selectedLanguage || translateMutation.isPending}
+                                  className="w-full"
+                                >
+                                  {translateMutation.isPending ? "Translating..." : "Create Translation"}
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                           <Button
                             variant="outline"
                             size="sm"

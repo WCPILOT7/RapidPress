@@ -38,11 +38,13 @@ The application follows a full-stack TypeScript architecture with clear separati
 
 ### Database Schema
 - **Press Releases**: Core entity storing company info, headlines, content, and AI-generated releases with edit capabilities
+- **Language Support**: Press releases include language field and originalId reference for translations
 - **Contacts**: Media contact information including name, email, and publication
 - **Advertisements**: Social media posts and ads generated from press releases with platform-specific content, AI-generated images, and editing capabilities
 - **Timestamps**: Automatic creation tracking for all entities
 - **AI Editing**: Press releases and advertisements can be updated through conversational AI interface or manual editing
 - **Image Generation**: DALL-E 3 integration for creating platform-specific visual content
+- **Translation System**: AI-powered translation with support for 15+ languages and proper format preservation
 
 ### External Integrations
 - **OpenAI API**: GPT-4o model for AI-powered press release generation and advertisement content creation
@@ -99,14 +101,17 @@ The application follows a full-stack TypeScript architecture with clear separati
 
 ## Recent Changes
 
-### July 20, 2025 - Advertisement Image Generation Optimization
-- **Performance Improvement**: Modified advertisement creation to skip automatic image generation
-- **On-Demand Images**: Added separate endpoint `/api/advertisements/:id/generate-image` for user-triggered image creation
-- **Enhanced UX**: Added "Generate Image" buttons in advertisement cards and detail views when images don't exist
-- **Speed Boost**: Advertisement creation now 3-5x faster as it only generates text content and image prompts initially
-- **Maintained Functionality**: Kept existing regenerate image and upload custom image features intact
-- **User Control**: Users can now choose which advertisements need images, reducing unnecessary API calls
+### July 20, 2025 - Translation Feature Implementation
+- **Multi-Language Support**: Added comprehensive translation system for press releases
+- **Language Field**: Extended database schema with language and originalId fields for tracking translations
+- **AI Translation**: Implemented GPT-4o powered translation preserving professional format and structure
+- **Translation UI**: Added translation dialogs in both generated release view and history section
+- **15+ Languages**: Support for Spanish, French, German, Italian, Portuguese, Chinese, Japanese, Korean, Arabic, Russian, Dutch, Swedish, Norwegian, Danish, Finnish
+- **Language Badges**: Visual indicators showing press release language in history view
+- **Proper Linking**: Translated versions reference original press release for relationship tracking
+- **Session Authentication**: Fixed session persistence issues with proper cookie configuration for Replit environment
+- **Form Submission Control**: Prevented duplicate press release generation during wizard step navigation
 
-**Rollback Point**: This version represents stable functionality with optimized image generation workflow.
+**Rollback Point**: This version includes stable translation functionality with enhanced user experience.
 
 The application is designed for scalability with clear separation of concerns, type safety throughout the stack, and modern development practices including hot reloading and error handling.

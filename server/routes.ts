@@ -330,6 +330,64 @@ Please provide the updated press release content based on the user's instruction
     }
   });
 
+  // Translate press release
+  app.post('/api/releases/:id/translate', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user!.id;
+      const { language } = req.body;
+      
+      const existingRelease = await storage.getPressReleaseById(id, userId);
+      if (!existingRelease) {
+        return res.status(404).json({ error: 'Press release not found' });
+      }
+
+      const prompt = `Translate the following press release to ${language}. Maintain the professional press release format, structure, and tone. Keep all company names, proper nouns, and contact information unchanged. Only translate the text content:
+
+${existingRelease.release}
+
+Please provide only the translated press release content, with no additional commentary.`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: `You are a professional translator specializing in business communications. Translate press releases accurately while maintaining their professional format and impact. Always preserve proper nouns, company names, and contact details.` },
+          { role: 'user', content: prompt },
+        ],
+      });
+
+      const translatedContent = completion.choices[0].message.content || existingRelease.release;
+      
+      // Also translate the headline
+      const headlinePrompt = `Translate this press release headline to ${language}: "${existingRelease.headline}"
+      
+      Provide only the translated headline, no additional text.`;
+
+      const headlineCompletion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are translating press release headlines. Provide only the translated headline.' },
+          { role: 'user', content: headlinePrompt },
+        ],
+      });
+
+      const translatedHeadline = headlineCompletion.choices[0].message.content || existingRelease.headline;
+      
+      // Create new translated press release
+      const translatedRelease = await storage.createPressRelease(userId, {
+        ...existingRelease,
+        headline: translatedHeadline,
+        release: translatedContent,
+        language: language,
+        originalId: existingRelease.originalId || existingRelease.id, // Link to original
+      });
+
+      res.json(translatedRelease);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Delete press release
   app.delete('/api/releases/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
