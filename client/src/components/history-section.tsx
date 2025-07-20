@@ -9,12 +9,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import PressReleaseEditor from "@/components/press-release-editor";
 import type { PressRelease } from "@shared/schema";
 
 export default function HistorySection() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCompany, setSelectedCompany] = useState<string>("all");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("30");
+  const [editingRelease, setEditingRelease] = useState<PressRelease | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -59,6 +61,19 @@ export default function HistorySection() {
     if (confirm("Are you sure you want to delete this press release?")) {
       deleteMutation.mutate(id);
     }
+  };
+
+  const handleEdit = (release: PressRelease) => {
+    setEditingRelease(release);
+  };
+
+  const handleCloseEditor = () => {
+    setEditingRelease(null);
+  };
+
+  const handleSaveEditor = (updatedRelease: PressRelease) => {
+    // The editor handles saving through the API, just close the editor
+    setEditingRelease(null);
   };
 
   if (isLoading) {
@@ -172,7 +187,12 @@ export default function HistorySection() {
                     <Button variant="ghost" size="icon" title="View">
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" title="Edit">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      title="Edit"
+                      onClick={() => handleEdit(release)}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" title="Send">
@@ -194,6 +214,15 @@ export default function HistorySection() {
           )}
         </div>
       </Card>
+
+      {/* Press Release Editor Modal */}
+      {editingRelease && (
+        <PressReleaseEditor
+          pressRelease={editingRelease}
+          onClose={handleCloseEditor}
+          onSave={handleSaveEditor}
+        />
+      )}
     </section>
   );
 }

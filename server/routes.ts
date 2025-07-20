@@ -86,6 +86,62 @@ Structure it with a compelling headline, subheadline, main body, quote, and boil
     }
   });
 
+  // Update press release
+  app.put('/api/releases/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { release } = req.body;
+      
+      const existingRelease = await storage.getPressReleaseById(id);
+      if (!existingRelease) {
+        return res.status(404).json({ error: 'Press release not found' });
+      }
+
+      const updatedRelease = await storage.updatePressRelease(id, { release });
+      res.json(updatedRelease);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Edit press release with AI
+  app.post('/api/releases/:id/edit', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { instruction, currentContent } = req.body;
+      
+      const existingRelease = await storage.getPressReleaseById(id);
+      if (!existingRelease) {
+        return res.status(404).json({ error: 'Press release not found' });
+      }
+
+      const prompt = `You are editing a press release. Here is the current content:
+
+${currentContent}
+
+User instruction: ${instruction}
+
+Please provide the updated press release content based on the user's instruction. Keep the professional press release format and style. Only return the updated content, no additional commentary.`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o', // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          { role: 'system', content: 'You are a professional press release editor. Modify the content based on user instructions while maintaining press release standards.' },
+          { role: 'user', content: prompt },
+        ],
+      });
+
+      const updatedContent = completion.choices[0].message.content || currentContent;
+      
+      res.json({ 
+        updatedContent,
+        changes: `Updated based on: ${instruction}`
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Delete press release
   app.delete('/api/releases/:id', async (req, res) => {
     try {

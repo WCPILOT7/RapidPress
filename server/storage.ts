@@ -5,6 +5,7 @@ export interface IStorage {
   createPressRelease(pressRelease: InsertPressRelease & { release: string }): Promise<PressRelease>;
   getPressReleases(): Promise<PressRelease[]>;
   getPressReleaseById(id: number): Promise<PressRelease | undefined>;
+  updatePressRelease(id: number, updates: Partial<PressRelease>): Promise<PressRelease>;
   deletePressRelease(id: number): Promise<void>;
   
   // Contact methods
@@ -48,6 +49,22 @@ export class MemStorage implements IStorage {
 
   async getPressReleaseById(id: number): Promise<PressRelease | undefined> {
     return this.pressReleases.get(id);
+  }
+
+  async updatePressRelease(id: number, updates: Partial<PressRelease>): Promise<PressRelease> {
+    const existingRelease = this.pressReleases.get(id);
+    if (!existingRelease) {
+      throw new Error('Press release not found');
+    }
+    
+    const updatedRelease: PressRelease = {
+      ...existingRelease,
+      ...updates,
+      id, // Ensure ID doesn't change
+    };
+    
+    this.pressReleases.set(id, updatedRelease);
+    return updatedRelease;
   }
 
   async deletePressRelease(id: number): Promise<void> {

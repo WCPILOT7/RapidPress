@@ -16,6 +16,12 @@ export interface SendReleaseRequest {
   customMessage?: string;
 }
 
+export interface EditReleaseRequest {
+  releaseId: number;
+  instruction: string;
+  currentContent: string;
+}
+
 export const api = {
   generatePressRelease: async (data: GeneratePressReleaseRequest) => {
     const response = await apiRequest('POST', '/api/generate', data);
@@ -61,6 +67,19 @@ export const api = {
 
   sendRelease: async (data: SendReleaseRequest) => {
     const response = await apiRequest('POST', '/api/send-release', data);
+    return response.json();
+  },
+
+  updatePressRelease: async (id: number, data: { release: string }) => {
+    const response = await apiRequest('PUT', `/api/releases/${id}`, data);
+    return response.json();
+  },
+
+  editPressRelease: async (data: EditReleaseRequest) => {
+    const response = await apiRequest('POST', `/api/releases/${data.releaseId}/edit`, {
+      instruction: data.instruction,
+      currentContent: data.currentContent
+    });
     return response.json();
   },
 };
