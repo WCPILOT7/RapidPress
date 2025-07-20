@@ -31,14 +31,16 @@ The application follows a full-stack TypeScript architecture with clear separati
 ### Backend Architecture
 - **API Framework**: Express.js with TypeScript for type safety
 - **Database Layer**: Drizzle ORM with PostgreSQL for data persistence
-- **Storage Pattern**: Interface-based storage layer with memory storage fallback
+- **Storage Pattern**: Interface-based storage layer using DatabaseStorage with PostgreSQL
 - **File Processing**: Multer for CSV file uploads and processing
 - **Email Integration**: Nodemailer for press release distribution
+- **AI Integration**: OpenAI GPT-4o for press release generation and editing
 
 ### Database Schema
-- **Press Releases**: Core entity storing company info, headlines, content, and generated releases
+- **Press Releases**: Core entity storing company info, headlines, content, and AI-generated releases with edit capabilities
 - **Contacts**: Media contact information including name, email, and publication
 - **Timestamps**: Automatic creation tracking for all entities
+- **AI Editing**: Press releases can be updated through conversational AI interface or manual editing
 
 ### External Integrations
 - **OpenAI API**: GPT-4o model for AI-powered press release generation
