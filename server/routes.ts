@@ -68,14 +68,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
-    saveUninitialized: false, // Don't create session for unauthenticated requests
-    rolling: true, // Reset expiration on activity
-    name: 'sessionId',
+    saveUninitialized: true, // Create session for all requests to ensure persistence
+    rolling: false, // Don't reset expiration to avoid session changes
+    name: 'connect.sid', // Use standard Express session name
     cookie: {
       secure: false, // Never use secure in development
-      httpOnly: false, // Allow JavaScript access for debugging
+      httpOnly: false, // Allow frontend access
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: false, // Allow cross-origin cookies
+      sameSite: 'lax', // Better for Replit environment
       path: '/', // Ensure cookie is available for all paths
     },
   }));
