@@ -42,6 +42,7 @@ interface AuthenticatedRequest extends Request {
 }
 
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  console.log('Session check:', { sessionId: req.sessionID, userId: req.session?.userId, session: req.session });
   if (!req.session?.userId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -67,9 +68,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
-    saveUninitialized: true, // Create session even for unauthenticated requests
+    saveUninitialized: false, // Don't create session for unauthenticated requests
     rolling: true, // Reset expiration on activity
-    name: 'connect.sid',
+    name: 'sessionId',
     cookie: {
       secure: false, // Never use secure in development
       httpOnly: false, // Allow JavaScript access for debugging
