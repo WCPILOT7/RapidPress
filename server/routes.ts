@@ -126,6 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req, res) => {
     try {
       const validatedData = loginSchema.parse(req.body);
+      console.log('Login attempt for:', validatedData.email);
       
       // Find user
       const user = await storage.getUserByEmail(validatedData.email);
@@ -141,6 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create session and save it
       req.session.userId = user.id;
+      console.log('Login successful, setting session userId:', user.id, 'sessionId:', req.sessionID);
       
       // Save session before responding
       req.session.save((err) => {
@@ -149,6 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(500).json({ error: 'Session save failed' });
         }
         
+        console.log('Session saved successfully for user:', user.id);
         // Return user without password
         const { password, ...userWithoutPassword } = user;
         res.json({ user: userWithoutPassword });
