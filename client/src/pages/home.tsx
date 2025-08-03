@@ -176,27 +176,8 @@ export default function Home() {
   };
 
   const handleGenerateClick = () => {
-    console.log('Generate button clicked');
-    console.log('Current step:', currentStep, 'Total steps:', formSteps.length);
-    console.log('Is final step:', currentStep === formSteps.length - 1);
-    console.log('Is step valid:', isStepValid(currentStep));
-    
     if (currentStep === formSteps.length - 1 && isStepValid(currentStep)) {
-      console.log('Submitting form...');
       form.handleSubmit(onSubmit)();
-    } else {
-      console.log('Form submission blocked - step not valid or not final step');
-      // Show what's missing
-      const step = formSteps[currentStep];
-      if (step) {
-        const requiredFields = step.fields.filter(field => 
-          ["company", "copy", "contact", "contactEmail", "contactPhone", "date"].includes(field)
-        );
-        requiredFields.forEach(field => {
-          const value = form.getValues(field as keyof FormData);
-          console.log(`${field}:`, value, 'valid:', value && typeof value === 'string' && value.trim() !== "");
-        });
-      }
     }
   };
 
@@ -717,20 +698,11 @@ export default function Home() {
                             <Button
                               type="button"
                               onClick={handleGenerateClick}
-                              disabled={generateMutation.isPending}
+                              disabled={generateMutation.isPending || !isStepValid(currentStep)}
                               className="flex items-center bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
                             >
-                              {generateMutation.isPending ? (
-                                <div className="flex items-center">
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                  Generating...
-                                </div>
-                              ) : (
-                                <div className="flex items-center">
-                                  <Wand2 className="w-4 h-4 mr-2" />
-                                  Generate Press Release
-                                </div>
-                              )}
+                              <Wand2 className="w-4 h-4 mr-2" />
+                              {generateMutation.isPending ? "Generating..." : "Generate Press Release"}
                             </Button>
                           )}
                         </div>
