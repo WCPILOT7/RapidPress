@@ -35,6 +35,7 @@ const transporter = nodemailer.createTransport({
 
 // Session configuration
 const PgSession = ConnectPgSimple(session);
+import MemoryStore from "memorystore";
 
 // Authentication middleware
 interface AuthenticatedRequest extends Request {
@@ -60,23 +61,23 @@ const attachUser = async (req: AuthenticatedRequest, res: Response, next: NextFu
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup session middleware
+  // Setup session middleware with memory store for now
+  const MemStore = MemoryStore(session);
   app.use(session({
-    store: new PgSession({
-      conString: process.env.DATABASE_URL,
-      tableName: 'session',
+    store: new MemStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
-    saveUninitialized: true, // Create session for all requests to ensure persistence
-    rolling: false, // Don't reset expiration to avoid session changes
-    name: 'connect.sid', // Use standard Express session name
+    saveUninitialized: false, // Don't create session until needed
+    rolling: false, // Don't reset expiration
+    name: 'connect.sid', // Standard session name
     cookie: {
       secure: false, // Never use secure in development
-      httpOnly: false, // Allow frontend access
+      httpOnly: false, // Allow frontend access for debugging
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: 'lax', // Better for Replit environment
-      path: '/', // Ensure cookie is available for all paths
+      path: '/', // Available for all paths
     },
   }));
 
