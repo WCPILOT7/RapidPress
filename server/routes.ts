@@ -35,7 +35,6 @@ const transporter = nodemailer.createTransport({
 
 // Session configuration
 const PgSession = ConnectPgSimple(session);
-import MemoryStore from "memorystore";
 
 // Authentication middleware
 interface AuthenticatedRequest extends Request {
@@ -43,13 +42,8 @@ interface AuthenticatedRequest extends Request {
 }
 
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  console.log('Session check:', { sessionId: req.sessionID, userId: req.session?.userId, cookies: req.headers.cookie });
-  
-  // For now, bypass auth check and use a default user ID for testing
   if (!req.session?.userId) {
-    // Set a default user for testing purposes
-    req.user = { id: 1, email: "test@example.com", name: "Test User" };
-    console.log('Using default user for testing:', req.user);
+    return res.status(401).json({ error: 'Authentication required' });
   }
   next();
 };
@@ -65,23 +59,23 @@ const attachUser = async (req: AuthenticatedRequest, res: Response, next: NextFu
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup session middleware with memory store for now
-  const MemStore = MemoryStore(session);
+  // Setup session middleware
   app.use(session({
-    store: new MemStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      tableName: 'session',
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
-    saveUninitialized: false, // Don't create session until needed
-    rolling: false, // Don't reset expiration
-    name: 'connect.sid', // Standard session name
+    saveUninitialized: true, // Create session even for unauthenticated requests
+    rolling: true, // Reset expiration on activity
+    name: 'connect.sid',
     cookie: {
       secure: false, // Never use secure in development
-      httpOnly: false, // Allow frontend access for debugging
+      httpOnly: false, // Allow JavaScript access for debugging
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax', // Better for Replit environment
-      path: '/', // Available for all paths
+      sameSite: false, // Allow cross-origin cookies
+      path: '/', // Ensure cookie is available for all paths
     },
   }));
 
@@ -131,7 +125,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req, res) => {
     try {
       const validatedData = loginSchema.parse(req.body);
-      console.log('Login attempt for:', validatedData.email);
       
       // Find user
       const user = await storage.getUserByEmail(validatedData.email);
@@ -147,7 +140,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create session and save it
       req.session.userId = user.id;
-      console.log('Login successful, setting session userId:', user.id, 'sessionId:', req.sessionID);
       
       // Save session before responding
       req.session.save((err) => {
@@ -156,7 +148,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(500).json({ error: 'Session save failed' });
         }
         
-        console.log('Session saved successfully for user:', user.id);
         // Return user without password
         const { password, ...userWithoutPassword } = user;
         res.json({ user: userWithoutPassword });
