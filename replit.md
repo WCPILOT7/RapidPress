@@ -32,9 +32,9 @@ The application follows a full-stack TypeScript architecture with clear separati
 - **API Framework**: Express.js with TypeScript for type safety
 - **Database Layer**: Drizzle ORM with PostgreSQL for data persistence
 - **Storage Pattern**: Interface-based storage layer using DatabaseStorage with PostgreSQL
-- **File Processing**: Multer for CSV file uploads and document processing for press release generation
+- **File Processing**: Multer for CSV file uploads and processing
 - **Email Integration**: Nodemailer for press release distribution
-- **AI Integration**: OpenAI GPT-4o for press release generation, editing, and document-based content creation
+- **AI Integration**: OpenAI GPT-4o for press release generation and editing
 
 ### Database Schema
 - **Press Releases**: Core entity storing company info, headlines, content, and AI-generated releases with edit capabilities
@@ -54,17 +54,14 @@ The application follows a full-stack TypeScript architecture with clear separati
 
 ## Data Flow
 
-1. **Press Release Generation**: 
-   - **Manual Entry**: User inputs company details → OpenAI processes content → Generated release stored in database
-   - **Document Upload**: User uploads file (text format) → File content extracted → AI processes document + optional form inputs → Generated release stored
+1. **Press Release Generation**: User inputs company details → OpenAI processes content → Generated release stored in database
 2. **Contact Management**: CSV upload → File processing → Bulk contact creation → Database storage
 3. **Distribution**: Select release + contacts → Email composition → Nodemailer sends → Tracking stored
 4. **Advertisement Creation**: Select press release + platform → OpenAI generates content + image prompt → Advertisement stored without image initially
 5. **On-Demand Image Generation**: User clicks "Generate Image" → DALL-E creates image → Advertisement updated with image URL
 6. **Advertisement Editing**: Manual text editing or AI-powered content modification → Updated content saved
 7. **Image Regeneration**: User triggers image refresh → DALL-E creates new image → Updated advertisement saved
-8. **Translation Workflow**: Select press release + target language → GPT-4o translates content → New translated version created and linked
-9. **History Management**: Database queries → React Query caching → UI display with filtering and language badges
+8. **History Management**: Database queries → React Query caching → UI display with filtering
 
 ## External Dependencies
 
@@ -104,18 +101,19 @@ The application follows a full-stack TypeScript architecture with clear separati
 
 ## Recent Changes
 
-### August 3, 2025 - File Upload & Enhanced Press Release Generation
-- **Document Upload System**: Added file upload functionality as the first step in press release creation wizard
-- **Smart Form Validation**: Form fields become optional when document is uploaded, with intelligent validation logic
-- **Enhanced Loading States**: Added comprehensive loading indicators during press release generation with visual feedback
-- **5-Step Wizard**: Expanded wizard to include file upload as first step, maintaining existing functionality
-- **Improved User Experience**: Added file upload area with drag-and-drop styling and file management
-- **File Processing Backend**: New `/api/generate-from-file` endpoint handles document processing and AI content generation
-- **Loading Optimization**: Generate button shows spinner and prevents multiple submissions during processing
-- **27+ Languages**: Complete translation support including 12 Indian regional languages (Hindi, Bengali, Telugu, Marathi, Tamil, Gujarati, Urdu, Kannada, Odia, Malayalam, Punjabi, Assamese)
+### July 20, 2025 - Translation Feature Implementation & UI Improvements
+- **Multi-Language Support**: Added comprehensive translation system for press releases with Indian regional languages
+- **Language Field**: Extended database schema with language and originalId fields for tracking translations
+- **AI Translation**: Implemented GPT-4o powered translation preserving professional format and structure
+- **Translation UI**: Added translation dialogs in both generated release view and history section
+- **27+ Languages**: Support for Spanish, French, German, Italian, Portuguese, Chinese, Japanese, Korean, Arabic, Russian, Dutch, Swedish, Norwegian, Danish, Finnish, plus 12 Indian regional languages (Hindi, Bengali, Telugu, Marathi, Tamil, Gujarati, Urdu, Kannada, Odia, Malayalam, Punjabi, Assamese)
+- **Language Badges**: Visual indicators showing press release language in history view
+- **Proper Linking**: Translated versions reference original press release for relationship tracking
 - **Translation Bug Fix**: Fixed duplicate key constraint error by properly excluding id and createdAt fields
-- **UI Cleanup**: Removed unwanted h1 element from navigation header and improved button responsiveness
+- **UI Cleanup**: Removed unwanted h1 element from navigation header
+- **Button Fix**: Fixed "Generate Press Release" button to work on first click by simplifying form submission logic
+- **Session Authentication**: Fixed session persistence issues with proper cookie configuration for Replit environment
 
-**Rollback Point**: This version includes stable file upload functionality with comprehensive translation support and enhanced loading states.
+**Rollback Point**: This version includes stable translation functionality with enhanced user experience and improved UI responsiveness.
 
 The application is designed for scalability with clear separation of concerns, type safety throughout the stack, and modern development practices including hot reloading and error handling.
