@@ -699,9 +699,17 @@ export default function Home() {
                               type="button"
                               onClick={handleGenerateClick}
                               disabled={generateMutation.isPending || !isStepValid(currentStep)}
-                              className="flex items-center bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                              className={`flex items-center transition-all duration-200 ${
+                                generateMutation.isPending 
+                                  ? "bg-gradient-to-r from-orange-500 to-orange-600 cursor-not-allowed" 
+                                  : "bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                              }`}
                             >
-                              <Wand2 className="w-4 h-4 mr-2" />
+                              {generateMutation.isPending ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              ) : (
+                                <Wand2 className="w-4 h-4 mr-2" />
+                              )}
                               {generateMutation.isPending ? "Generating..." : "Generate Press Release"}
                             </Button>
                           )}
@@ -715,7 +723,20 @@ export default function Home() {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold mb-4">Generated Press Release</h3>
-                  {generatedRelease ? (
+                  {generateMutation.isPending ? (
+                    <div className="text-center py-12">
+                      <div className="flex flex-col items-center space-y-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                        <div className="space-y-2">
+                          <p className="text-lg font-medium text-gray-900">Creating your press release...</p>
+                          <p className="text-sm text-gray-500">This may take 10-30 seconds as we generate professional content</p>
+                        </div>
+                        <div className="w-full max-w-xs bg-gray-200 rounded-full h-2">
+                          <div className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full animate-pulse" style={{width: '75%'}}></div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : generatedRelease ? (
                     <div className="space-y-4">
                       <div className="prose prose-sm max-w-none">
                         <pre className="whitespace-pre-wrap text-sm">{generatedRelease.release}</pre>
