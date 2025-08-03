@@ -12,12 +12,18 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  console.log(`API Request: ${method} ${url}`);
+  console.log("Document cookies:", document.cookie);
+  
   const res = await fetch(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
+
+  console.log(`API Response: ${res.status}`);
+  console.log("Response cookies:", res.headers.get('set-cookie'));
 
   await throwIfResNotOk(res);
   return res;
