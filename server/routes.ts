@@ -42,6 +42,8 @@ interface AuthenticatedRequest extends Request {
 }
 
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  console.log("requireAuth middleware - session:", req.session);
+  console.log("requireAuth middleware - userId:", req.session?.userId);
   if (!req.session?.userId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -104,6 +106,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create session and save it
       req.session.userId = user.id;
+      console.log("Login - setting session userId:", user.id);
+      console.log("Login - session before save:", req.session);
       
       // Save session before responding
       req.session.save((err) => {
@@ -111,6 +115,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Session save error:', err);
           return res.status(500).json({ error: 'Session save failed' });
         }
+        
+        console.log("Login - session saved successfully");
+        console.log("Login - session after save:", req.session);
         
         // Return user without password
         const { password, ...userWithoutPassword } = user;
@@ -140,6 +147,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create session and save it
       req.session.userId = user.id;
+      console.log("Login - setting session userId:", user.id);
+      console.log("Login - session before save:", req.session);
       
       // Save session before responding
       req.session.save((err) => {
@@ -147,6 +156,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Session save error:', err);
           return res.status(500).json({ error: 'Session save failed' });
         }
+        
+        console.log("Login - session saved successfully");
+        console.log("Login - session after save:", req.session);
         
         // Return user without password
         const { password, ...userWithoutPassword } = user;
