@@ -19,12 +19,12 @@ import { apiRequest } from "@/lib/queryClient";
 import type { PressRelease } from "@shared/schema";
 
 const formSchema = z.object({
-  company: z.string().min(1, "Company name is required"),
-  copy: z.string().min(1, "Main copy is required"),
-  contact: z.string().min(1, "PR contact is required"),
-  contactEmail: z.string().email("Valid email is required"),
-  contactPhone: z.string().min(1, "Phone number is required"),
-  date: z.string().min(1, "Release date is required"),
+  company: z.string().optional(),
+  copy: z.string().optional(),
+  contact: z.string().optional(),
+  contactEmail: z.string().optional(),
+  contactPhone: z.string().optional(),
+  date: z.string().optional(),
   brandTone: z.string().optional(),
   quote: z.string().optional(),
   competitors: z.string().optional(),
@@ -39,6 +39,8 @@ export default function Home() {
   const [editInstruction, setEditInstruction] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -46,27 +48,34 @@ export default function Home() {
   const formSteps = [
     {
       id: 0,
-      title: "Company Info",
-      description: "Basic company details",
-      icon: Building,
-      fields: ["company", "contact", "contactEmail", "contactPhone", "date"]
+      title: "File Upload",
+      description: "Upload document or manual entry",
+      icon: Upload,
+      fields: []
     },
     {
       id: 1,
+      title: "Company Info",
+      description: "Basic company details",
+      icon: Building,
+      fields: uploadedFile ? [] : ["company", "contact", "contactEmail", "contactPhone", "date"]
+    },
+    {
+      id: 2,
       title: "Brand Voice",
       description: "Tone and guidelines",
       icon: Palette,
       fields: ["brandTone"]
     },
     {
-      id: 2,
+      id: 3,
       title: "Content",
       description: "Main story and details",
       icon: FileTextIcon,
-      fields: ["copy"]
+      fields: uploadedFile ? [] : ["copy"]
     },
     {
-      id: 3,
+      id: 4,
       title: "Quotes & Context",
       description: "Executive quotes and competition",
       icon: Quote,
@@ -91,11 +100,36 @@ export default function Home() {
 
   const generateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await apiRequest('POST', '/api/generate', data);
-      return response.json();
+      if (uploadedFile) {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('file', uploadedFile);
+        
+        // Add other form fields if they exist
+        Object.entries(data).forEach(([key, value]) => {
+          if (value) {
+            formData.append(key, value);
+          }
+        });
+        
+        const response = await fetch('/api/generate-from-file', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to generate press release from file');
+        }
+        
+        return response.json();
+      } else {
+        const response = await apiRequest('POST', '/api/generate', data);
+        return response.json();
+      }
     },
     onSuccess: (data) => {
       setGeneratedRelease(data);
+      setIsGenerating(false);
       toast({
         title: "Success",
         description: "Press release generated successfully!",
@@ -103,6 +137,7 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/releases"] });
     },
     onError: (error: any) => {
+      setIsGenerating(false);
       toast({
         title: "Error",
         description: error.message || "Failed to generate press release",
@@ -163,9 +198,26 @@ export default function Home() {
     // Only submit if we're on the final step
     if (currentStep === formSteps.length - 1) {
       try {
+        // Validate required fields if no file uploaded
+        if (!uploadedFile) {
+          const requiredFields = ['company', 'copy', 'contact', 'contactEmail', 'contactPhone', 'date'];
+          const missingFields = requiredFields.filter(field => !data[field as keyof FormData] || data[field as keyof FormData]?.trim() === '');
+          
+          if (missingFields.length > 0) {
+            toast({
+              title: "Missing Required Fields",
+              description: `Please fill in: ${missingFields.join(', ')}`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+        
+        setIsGenerating(true);
         generateMutation.mutate(data);
       } catch (error) {
         console.error('Form submission error:', error);
+        setIsGenerating(false);
         toast({
           title: "Submission Error",
           description: "Unable to submit form. Please try again.",
@@ -179,6 +231,42 @@ export default function Home() {
     if (currentStep === formSteps.length - 1 && isStepValid(currentStep)) {
       form.handleSubmit(onSubmit)();
     }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Accept common document formats
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'text/rtf'
+      ];
+      
+      if (allowedTypes.includes(file.type)) {
+        setUploadedFile(file);
+        toast({
+          title: "File uploaded",
+          description: `${file.name} uploaded successfully. Other fields are now optional.`,
+        });
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF, Word document, RTF, or text file.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const removeFile = () => {
+    setUploadedFile(null);
+    toast({
+      title: "File removed",
+      description: "Please fill in the required fields manually.",
+    });
   };
 
   // Translation mutation
@@ -242,6 +330,17 @@ export default function Home() {
       const step = formSteps[stepIndex];
       if (!step) return false;
       
+      // Step 0 (File Upload) is valid if user has uploaded a file OR wants to proceed manually
+      if (stepIndex === 0) {
+        return true; // Always allow proceeding from file upload step
+      }
+      
+      // If file is uploaded, most steps don't require field validation
+      if (uploadedFile) {
+        return true;
+      }
+      
+      // For manual entry, check required fields
       const requiredFields = step.fields.filter(field => 
         ["company", "copy", "contact", "contactEmail", "contactPhone", "date"].includes(field)
       );
@@ -475,13 +574,84 @@ export default function Home() {
                         }} 
                         className="space-y-6"
                       >
-                        {/* Step 0: Company Info */}
+                        {/* Step 0: File Upload */}
                         {currentStep === 0 && (
+                          <div className="space-y-6" style={{ minHeight: '400px' }}>
+                            <div className="text-center mb-6">
+                              <Upload className="w-12 h-12 text-blue-600 mx-auto mb-3" />
+                              <h3 className="text-xl font-bold text-gray-900">Document Upload</h3>
+                              <p className="text-gray-600">Upload a document or proceed to manual entry</p>
+                            </div>
+
+                            {/* File Upload Area */}
+                            <div className="space-y-4">
+                              {!uploadedFile ? (
+                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-4" />
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium text-gray-900">Upload a document</p>
+                                    <p className="text-xs text-gray-500">PDF, Word, RTF, or text files up to 10MB</p>
+                                  </div>
+                                  <input
+                                    type="file"
+                                    onChange={handleFileUpload}
+                                    accept=".pdf,.doc,.docx,.txt,.rtf"
+                                    className="mt-4 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="flex-shrink-0">
+                                        <FileText className="w-6 h-6 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium text-green-900">{uploadedFile.name}</p>
+                                        <p className="text-xs text-green-700">
+                                          {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={removeFile}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {uploadedFile && (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                  <p className="text-sm text-blue-800">
+                                    <strong>File uploaded successfully!</strong> The following steps are now optional, 
+                                    but you can still provide additional information to enhance your press release.
+                                  </p>
+                                </div>
+                              )}
+
+                              <div className="text-center">
+                                <p className="text-sm text-gray-500">
+                                  Or skip file upload and fill out the form manually
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Step 1: Company Info */}
+                        {currentStep === 1 && (
                           <div className="space-y-6" style={{ minHeight: '400px' }}>
                             <div className="text-center mb-6">
                               <Building className="w-12 h-12 text-blue-600 mx-auto mb-3" />
                               <h3 className="text-xl font-bold text-gray-900">Company Information</h3>
-                              <p className="text-gray-600">Let's start with basic details about your company</p>
+                              <p className="text-gray-600">
+                                {uploadedFile ? "Optional: Add or modify company details" : "Let's start with basic details about your company"}
+                              </p>
                             </div>
 
                             <div className="grid grid-cols-1 gap-6">
@@ -558,8 +728,8 @@ export default function Home() {
                           </div>
                         )}
 
-                        {/* Step 1: Brand Voice */}
-                        {currentStep === 1 && (
+                        {/* Step 2: Brand Voice */}
+                        {currentStep === 2 && (
                           <div className="space-y-6">
                             <div className="text-center mb-6">
                               <Palette className="w-12 h-12 text-purple-600 mx-auto mb-3" />
@@ -588,8 +758,8 @@ export default function Home() {
                           </div>
                         )}
 
-                        {/* Step 2: Content */}
-                        {currentStep === 2 && (
+                        {/* Step 3: Content */}
+                        {currentStep === 3 && (
                           <div className="space-y-6">
                             <div className="text-center mb-6">
                               <FileTextIcon className="w-12 h-12 text-green-600 mx-auto mb-3" />
@@ -618,8 +788,8 @@ export default function Home() {
                           </div>
                         )}
 
-                        {/* Step 3: Quotes & Context */}
-                        {currentStep === 3 && (
+                        {/* Step 4: Quotes & Context */}
+                        {currentStep === 4 && (
                           <div className="space-y-6">
                             <div className="text-center mb-6">
                               <Quote className="w-12 h-12 text-orange-600 mx-auto mb-3" />
@@ -698,11 +868,20 @@ export default function Home() {
                             <Button
                               type="button"
                               onClick={handleGenerateClick}
-                              disabled={generateMutation.isPending || !isStepValid(currentStep)}
-                              className="flex items-center bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                              disabled={isGenerating || generateMutation.isPending || !isStepValid(currentStep)}
+                              className="flex items-center bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:opacity-50"
                             >
-                              <Wand2 className="w-4 h-4 mr-2" />
-                              {generateMutation.isPending ? "Generating..." : "Generate Press Release"}
+                              {(isGenerating || generateMutation.isPending) ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Wand2 className="w-4 h-4 mr-2" />
+                                  Generate Press Release
+                                </>
+                              )}
                             </Button>
                           )}
                         </div>
@@ -715,7 +894,15 @@ export default function Home() {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold mb-4">Generated Press Release</h3>
-                  {generatedRelease ? (
+                  {isGenerating || generateMutation.isPending ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600 mb-2">Generating your press release...</p>
+                      <p className="text-sm text-gray-500">
+                        {uploadedFile ? "Processing uploaded document and creating press release" : "Creating press release from your inputs"}
+                      </p>
+                    </div>
+                  ) : generatedRelease ? (
                     <div className="space-y-4">
                       <div className="prose prose-sm max-w-none">
                         <pre className="whitespace-pre-wrap text-sm">{generatedRelease.release}</pre>
