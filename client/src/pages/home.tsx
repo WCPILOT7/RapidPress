@@ -176,8 +176,28 @@ export default function Home() {
   };
 
   const handleGenerateClick = () => {
+    console.log("Generate button clicked");
+    console.log("Current step:", currentStep, "Total steps:", formSteps.length);
+    console.log("Is final step:", currentStep === formSteps.length - 1);
+    console.log("Is step valid:", isStepValid(currentStep));
+    
     if (currentStep === formSteps.length - 1 && isStepValid(currentStep)) {
+      console.log("Submitting form...");
+      
+      // Show immediate feedback
+      toast({
+        title: "Generating Press Release",
+        description: "Please wait while we create your press release...",
+      });
+      
       form.handleSubmit(onSubmit)();
+    } else {
+      console.log("Cannot submit - not on final step or step invalid");
+      toast({
+        title: "Cannot Generate",
+        description: "Please complete all required fields in the current step.",
+        variant: "destructive",
+      });
     }
   };
 
