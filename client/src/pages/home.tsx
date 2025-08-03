@@ -229,7 +229,58 @@ export default function Home() {
 
   const handleGenerateClick = () => {
     if (currentStep === formSteps.length - 1 && isStepValid(currentStep)) {
-      form.handleSubmit(onSubmit)();
+      if (uploadedFile) {
+        // Use file upload generation
+        const formData = new FormData();
+        formData.append('file', uploadedFile);
+        
+        // Add form data to the file upload
+        const currentFormData = form.getValues();
+        Object.keys(currentFormData).forEach(key => {
+          const value = currentFormData[key as keyof FormData];
+          if (value) {
+            formData.append(key, value);
+          }
+        });
+        
+        setIsGenerating(true);
+        
+        // Call file upload API with credentials
+        fetch('/api/generate-from-file', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include', // Include cookies for authentication
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(data => {
+              throw new Error(data.error || 'Failed to generate press release');
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          setGeneratedRelease(data);
+          toast({
+            title: "Success",
+            description: "Press release generated from your document!",
+          });
+        })
+        .catch(error => {
+          console.error('File upload error:', error);
+          toast({
+            title: "Generation Failed",
+            description: error.message || "Failed to generate press release from file",
+            variant: "destructive",
+          });
+        })
+        .finally(() => {
+          setIsGenerating(false);
+        });
+      } else {
+        // Use regular form submission
+        form.handleSubmit(onSubmit)();
+      }
     }
   };
 
