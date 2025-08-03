@@ -701,8 +701,17 @@ export default function Home() {
                               disabled={generateMutation.isPending || !isStepValid(currentStep)}
                               className="flex items-center bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
                             >
-                              <Wand2 className="w-4 h-4 mr-2" />
-                              {generateMutation.isPending ? "Generating..." : "Generate Press Release"}
+                              {generateMutation.isPending ? (
+                                <div className="flex items-center">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Generating...
+                                </div>
+                              ) : (
+                                <div className="flex items-center">
+                                  <Wand2 className="w-4 h-4 mr-2" />
+                                  Generate Press Release
+                                </div>
+                              )}
                             </Button>
                           )}
                         </div>
