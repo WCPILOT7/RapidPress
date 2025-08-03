@@ -10,6 +10,7 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
+import MemoryStore from "memorystore";
 
 // Extend session data
 declare module "express-session" {
@@ -35,6 +36,7 @@ const transporter = nodemailer.createTransport({
 
 // Session configuration
 const PgSession = ConnectPgSimple(session);
+const MemStore = MemoryStore(session);
 
 // Authentication middleware
 interface AuthenticatedRequest extends Request {
@@ -42,8 +44,10 @@ interface AuthenticatedRequest extends Request {
 }
 
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  console.log("requireAuth middleware - session ID:", req.session?.id);
   console.log("requireAuth middleware - session:", req.session);
   console.log("requireAuth middleware - userId:", req.session?.userId);
+  console.log("requireAuth middleware - cookies:", req.headers.cookie);
   if (!req.session?.userId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -61,22 +65,21 @@ const attachUser = async (req: AuthenticatedRequest, res: Response, next: NextFu
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup session middleware
+  // Setup session middleware - temporarily using memory store for debugging
   app.use(session({
-    store: new PgSession({
-      conString: process.env.DATABASE_URL,
-      tableName: 'session',
+    store: new MemStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
-    saveUninitialized: true, // Create session even for unauthenticated requests
+    saveUninitialized: false, // Don't create session for unauthenticated requests
     rolling: true, // Reset expiration on activity
     name: 'connect.sid',
     cookie: {
       secure: false, // Never use secure in development
       httpOnly: false, // Allow JavaScript access for debugging
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: false, // Allow cross-origin cookies
+      sameSite: 'lax', // CSRF protection but allow same-site requests
       path: '/', // Ensure cookie is available for all paths
     },
   }));
