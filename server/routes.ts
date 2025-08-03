@@ -177,24 +177,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Generate press release from uploaded file
-  app.post('/api/generate-from-file', upload.single('file'), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/generate-from-file', requireAuth, upload.single('file'), async (req: AuthenticatedRequest, res) => {
     try {
-      // Check authentication manually since multer interferes with middleware
-      if (!req.session?.userId) {
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-      
-      // Get user from session
-      const user = await storage.getUserById(req.session.userId);
-      if (!user) {
-        return res.status(401).json({ error: 'Invalid session' });
-      }
-      
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      const userId = user.id;
+      const userId = req.user!.id;
       
       // Extract text content from the uploaded file
       let fileContent = '';
