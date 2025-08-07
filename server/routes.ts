@@ -10,7 +10,6 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
-import MemoryStore from "memorystore";
 
 // Extend session data
 declare module "express-session" {
@@ -36,7 +35,6 @@ const transporter = nodemailer.createTransport({
 
 // Session configuration
 const PgSession = ConnectPgSimple(session);
-const MemStore = MemoryStore(session);
 
 // Authentication middleware
 interface AuthenticatedRequest extends Request {
@@ -44,10 +42,6 @@ interface AuthenticatedRequest extends Request {
 }
 
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  console.log("requireAuth middleware - session ID:", req.session?.id);
-  console.log("requireAuth middleware - session:", req.session);
-  console.log("requireAuth middleware - userId:", req.session?.userId);
-  console.log("requireAuth middleware - cookies:", req.headers.cookie);
   if (!req.session?.userId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -65,23 +59,23 @@ const attachUser = async (req: AuthenticatedRequest, res: Response, next: NextFu
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup session middleware - temporarily using memory store for debugging
+  // Setup session middleware
   app.use(session({
-    store: new MemStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      tableName: 'session',
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
-    saveUninitialized: false, // Don't create session for unauthenticated requests
+    saveUninitialized: true, // Create session even for unauthenticated requests
     rolling: true, // Reset expiration on activity
     name: 'connect.sid',
     cookie: {
       secure: false, // Never use secure in development
       httpOnly: false, // Allow JavaScript access for debugging
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: false, // Disable sameSite for development
+      sameSite: false, // Allow cross-origin cookies
       path: '/', // Ensure cookie is available for all paths
-      domain: undefined, // Don't set domain in development
     },
   }));
 
@@ -110,8 +104,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create session and save it
       req.session.userId = user.id;
-      console.log("Login - setting session userId:", user.id);
-      console.log("Login - session before save:", req.session);
       
       // Save session before responding
       req.session.save((err) => {
@@ -119,9 +111,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Session save error:', err);
           return res.status(500).json({ error: 'Session save failed' });
         }
-        
-        console.log("Login - session saved successfully");
-        console.log("Login - session after save:", req.session);
         
         // Return user without password
         const { password, ...userWithoutPassword } = user;
@@ -151,8 +140,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create session and save it
       req.session.userId = user.id;
-      console.log("Login - setting session userId:", user.id);
-      console.log("Login - session before save:", req.session);
       
       // Save session before responding
       req.session.save((err) => {
@@ -160,9 +147,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Session save error:', err);
           return res.status(500).json({ error: 'Session save failed' });
         }
-        
-        console.log("Login - session saved successfully");
-        console.log("Login - session after save:", req.session);
         
         // Return user without password
         const { password, ...userWithoutPassword } = user;

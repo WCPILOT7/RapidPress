@@ -38,18 +38,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const response = await fetch('/api/auth/me', {
         credentials: 'include',
       });
-      console.log("Auth check response status:", response.status);
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
-        console.log("Auth check successful, user:", data.user);
-      } else {
-        setUser(null);
-        console.log("Auth check failed, clearing user");
       }
     } catch (error) {
-      console.log('Auth check error:', error);
-      setUser(null);
+      console.log('Not authenticated');
     } finally {
       setIsLoading(false);
     }
@@ -63,14 +57,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const response = await apiRequest('POST', '/api/auth/login', { email, password });
     const data = await response.json();
     setUser(data.user);
-    console.log("Login successful, user set:", data.user);
+    // Force a re-check of auth status
+    await checkAuth();
   };
 
   const register = async (name: string, email: string, password: string) => {
     const response = await apiRequest('POST', '/api/auth/register', { name, email, password });
     const data = await response.json();
     setUser(data.user);
-    console.log("Registration successful, user set:", data.user);
+    // Force a re-check of auth status
+    await checkAuth();
   };
 
   const logout = async () => {

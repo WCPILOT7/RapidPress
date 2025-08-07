@@ -91,20 +91,10 @@ export default function Home() {
 
   const generateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      console.log("generateMutation starting with data:", data);
-      try {
-        const response = await apiRequest('POST', '/api/generate', data);
-        console.log("API response status:", response.status);
-        const result = await response.json();
-        console.log("API response data:", result);
-        return result;
-      } catch (error) {
-        console.error("API request failed:", error);
-        throw error;
-      }
+      const response = await apiRequest('POST', '/api/generate', data);
+      return response.json();
     },
     onSuccess: (data) => {
-      console.log("generateMutation success:", data);
       setGeneratedRelease(data);
       toast({
         title: "Success",
@@ -113,7 +103,6 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/releases"] });
     },
     onError: (error: any) => {
-      console.error("generateMutation error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to generate press release",
@@ -171,10 +160,8 @@ export default function Home() {
   });
 
   const onSubmit = (data: FormData) => {
-    console.log("onSubmit called with data:", data);
     // Only submit if we're on the final step
     if (currentStep === formSteps.length - 1) {
-      console.log("Calling generateMutation.mutate with:", data);
       try {
         generateMutation.mutate(data);
       } catch (error) {
@@ -185,34 +172,12 @@ export default function Home() {
           variant: "destructive",
         });
       }
-    } else {
-      console.log("Not submitting - not on final step. Current step:", currentStep);
     }
   };
 
   const handleGenerateClick = () => {
-    console.log("Generate button clicked");
-    console.log("Current step:", currentStep, "Total steps:", formSteps.length);
-    console.log("Is final step:", currentStep === formSteps.length - 1);
-    console.log("Is step valid:", isStepValid(currentStep));
-    
     if (currentStep === formSteps.length - 1 && isStepValid(currentStep)) {
-      console.log("Submitting form...");
-      
-      // Show immediate feedback
-      toast({
-        title: "Generating Press Release",
-        description: "Please wait while we create your press release...",
-      });
-      
       form.handleSubmit(onSubmit)();
-    } else {
-      console.log("Cannot submit - not on final step or step invalid");
-      toast({
-        title: "Cannot Generate",
-        description: "Please complete all required fields in the current step.",
-        variant: "destructive",
-      });
     }
   };
 
