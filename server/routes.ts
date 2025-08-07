@@ -59,23 +59,24 @@ const attachUser = async (req: AuthenticatedRequest, res: Response, next: NextFu
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup session middleware
+  // Setup session middleware with proper configuration for Replit
   app.use(session({
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: 'session',
+      createTableIfMissing: true,
     }),
-    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-    resave: false,
-    saveUninitialized: true, // Create session even for unauthenticated requests
-    rolling: true, // Reset expiration on activity
-    name: 'connect.sid',
+    secret: process.env.SESSION_SECRET || 'replit-pr-studio-secret-key-2025',
+    resave: true, // Force session save on every request
+    saveUninitialized: true, // Create session for all requests
+    rolling: false, // Don't reset expiration on every request
+    name: 'sessionid',
     cookie: {
-      secure: false, // Never use secure in development
-      httpOnly: false, // Allow JavaScript access for debugging
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: false, // Allow cross-origin cookies
-      path: '/', // Ensure cookie is available for all paths
+      secure: false,
+      httpOnly: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite: 'none',
+      path: '/',
     },
   }));
 
@@ -138,19 +139,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // Create session and save it
-      req.session.userId = user.id;
-      
-      // Save session before responding
-      req.session.save((err) => {
+      // Create new session for security
+      req.session.regenerate((err) => {
         if (err) {
-          console.error('Session save error:', err);
-          return res.status(500).json({ error: 'Session save failed' });
+          console.error('Session regenerate error:', err);
+          return res.status(500).json({ error: 'Session creation failed' });
         }
         
-        // Return user without password
-        const { password, ...userWithoutPassword } = user;
-        res.json({ user: userWithoutPassword });
+        // Set userId in new session
+        req.session.userId = user.id;
+        
+        // Force save session
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Session save error:', saveErr);
+            return res.status(500).json({ error: 'Session save failed' });
+          }
+          
+          console.log('Login successful for user:', user.id, 'Session ID:', req.sessionID);
+          
+          // Return user without password
+          const { password, ...userWithoutPassword } = user;
+          res.json({ user: userWithoutPassword });
+        });
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -163,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) {
         return res.status(500).json({ error: 'Logout failed' });
       }
-      res.clearCookie('connect.sid');
+      res.clearCookie('sessionid');
       res.json({ message: 'Logged out successfully' });
     });
   });
