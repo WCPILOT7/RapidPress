@@ -42,7 +42,6 @@ interface AuthenticatedRequest extends Request {
 }
 
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  console.log('Auth check - Session ID:', req.sessionID, 'User ID:', req.session?.userId);
   if (!req.session?.userId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -60,24 +59,23 @@ const attachUser = async (req: AuthenticatedRequest, res: Response, next: NextFu
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup session middleware with proper configuration for Replit
+  // Setup session middleware
   app.use(session({
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: 'session',
-      createTableIfMissing: true,
     }),
-    secret: process.env.SESSION_SECRET || 'replit-pr-studio-secret-key-2025',
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
-    saveUninitialized: false,
-    rolling: true,
-    name: 'sessionid',
+    saveUninitialized: true, // Create session even for unauthenticated requests
+    rolling: true, // Reset expiration on activity
+    name: 'connect.sid',
     cookie: {
-      secure: false,
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: 'lax',
-      path: '/',
+      secure: false, // Never use secure in development
+      httpOnly: false, // Allow JavaScript access for debugging
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: false, // Allow cross-origin cookies
+      path: '/', // Ensure cookie is available for all paths
     },
   }));
 
@@ -140,29 +138,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // Create new session for security
-      req.session.regenerate((err) => {
+      // Create session and save it
+      req.session.userId = user.id;
+      
+      // Save session before responding
+      req.session.save((err) => {
         if (err) {
-          console.error('Session regenerate error:', err);
-          return res.status(500).json({ error: 'Session creation failed' });
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: 'Session save failed' });
         }
         
-        // Set userId in new session
-        req.session.userId = user.id;
-        
-        // Force save session
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error('Session save error:', saveErr);
-            return res.status(500).json({ error: 'Session save failed' });
-          }
-          
-          console.log('Login successful for user:', user.id, 'Session ID:', req.sessionID);
-          
-          // Return user without password
-          const { password, ...userWithoutPassword } = user;
-          res.json({ user: userWithoutPassword });
-        });
+        // Return user without password
+        const { password, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword });
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -175,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) {
         return res.status(500).json({ error: 'Logout failed' });
       }
-      res.clearCookie('sessionid');
+      res.clearCookie('connect.sid');
       res.json({ message: 'Logged out successfully' });
     });
   });
