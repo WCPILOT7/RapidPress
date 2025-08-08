@@ -699,19 +699,10 @@ export default function Home() {
                               type="button"
                               onClick={handleGenerateClick}
                               disabled={generateMutation.isPending || !isStepValid(currentStep)}
-                              className="flex items-center bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:opacity-60"
+                              className="flex items-center bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
                             >
-                              {generateMutation.isPending ? (
-                                <div className="flex items-center">
-                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                                  Generating...
-                                </div>
-                              ) : (
-                                <>
-                                  <Wand2 className="w-4 h-4 mr-2" />
-                                  Generate Press Release
-                                </>
-                              )}
+                              <Wand2 className="w-4 h-4 mr-2" />
+                              {generateMutation.isPending ? "Generating..." : "Generate Press Release"}
                             </Button>
                           )}
                         </div>
@@ -788,14 +779,6 @@ export default function Home() {
                             </div>
                           </DialogContent>
                         </Dialog>
-                      </div>
-                    </div>
-                  ) : generateMutation.isPending ? (
-                    <div className="text-center py-12 text-blue-600">
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-                      <div className="space-y-2">
-                        <p className="text-lg font-medium">Generating your press release...</p>
-                        <p className="text-sm text-gray-500">This may take a few moments while our AI crafts your content</p>
                       </div>
                     </div>
                   ) : (
