@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Share2, Facebook, Twitter, Linkedin, Instagram, Monitor, Plus, Trash2, Copy, Eye, Newspaper, ArrowLeft, Edit, Save, X, RefreshCw, Image as ImageIcon, Upload } from "lucide-react";
+import { Share2, Facebook, Twitter, Linkedin, Instagram, Monitor, Plus, Trash2, Copy, Eye, Newspaper, ArrowLeft, Edit, Save, X, RefreshCw, Image as ImageIcon, Upload, ExternalLink } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -375,6 +375,68 @@ export default function Advertisements() {
     return platformColors[platform as keyof typeof platformColors] || "bg-gray-600";
   };
 
+  // Generate platform-specific sharing URLs
+  const generateSharingURL = (ad: Advertisement) => {
+    const content = ad.content;
+    const encodedContent = encodeURIComponent(content);
+    
+    switch (ad.platform) {
+      case 'twitter':
+        return `https://twitter.com/intent/tweet?text=${encodedContent}`;
+      case 'facebook':
+        return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}&quote=${encodedContent}`;
+      case 'linkedin':
+        return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}&summary=${encodedContent}`;
+      case 'instagram':
+        // Instagram doesn't support direct posting via URL, so we'll copy to clipboard with instructions
+        return null;
+      case 'google_ads':
+        // Google Ads doesn't have a direct sharing URL
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  const handleShare = (ad: Advertisement) => {
+    const sharingURL = generateSharingURL(ad);
+    
+    if (sharingURL) {
+      window.open(sharingURL, '_blank', 'width=600,height=600');
+    } else if (ad.platform === 'instagram') {
+      // For Instagram, copy content and show instructions
+      copyToClipboard(ad.content);
+      toast({
+        title: "Content Copied",
+        description: "Content copied to clipboard. Open Instagram and paste in a new post!",
+      });
+    } else if (ad.platform === 'google_ads') {
+      // For Google Ads, copy content and show instructions
+      copyToClipboard(ad.content);
+      toast({
+        title: "Content Copied",
+        description: "Ad content copied to clipboard. Open Google Ads Manager to create your campaign!",
+      });
+    }
+  };
+
+  const getSharingButtonText = (platform: string) => {
+    switch (platform) {
+      case 'twitter':
+        return 'Tweet';
+      case 'facebook':
+        return 'Share';
+      case 'linkedin':
+        return 'Post';
+      case 'instagram':
+        return 'Copy for IG';
+      case 'google_ads':
+        return 'Copy for Ads';
+      default:
+        return 'Share';
+    }
+  };
+
   const socialPlatforms = [
     { value: "facebook", label: "Facebook" },
     { value: "twitter", label: "Twitter/X" },
@@ -694,34 +756,48 @@ export default function Advertisements() {
                         <span>Created {format(new Date(ad.createdAt), 'MMM d, yyyy')}</span>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setViewingAd(ad)}
-                          className="w-full"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(ad)}
-                          className="w-full"
-                        >
-                          <Edit className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyToClipboard(ad.content)}
-                          className="w-full"
-                        >
-                          <Copy className="w-4 h-4 mr-1" />
-                          Copy
-                        </Button>
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setViewingAd(ad)}
+                            className="w-full"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(ad)}
+                            className="w-full"
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(ad.content)}
+                            className="w-full"
+                          >
+                            <Copy className="w-4 h-4 mr-1" />
+                            Copy
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleShare(ad)}
+                            className={`w-full ${platformColor} text-white hover:opacity-90`}
+                            data-testid={`button-share-${ad.platform}-${ad.id}`}
+                          >
+                            <ExternalLink className="w-4 h-4 mr-1" />
+                            {getSharingButtonText(ad.platform)}
+                          </Button>
+                        </div>
                         {ad.imageUrl ? (
                           <Button
                             variant="outline"
