@@ -221,7 +221,7 @@ Quote: ${validatedData.quote || 'No quote provided'}
 Competitor Info: ${validatedData.competitors || 'No competitor information provided'}
 Brand Tone & Guidelines: ${validatedData.brandTone || 'No specific brand guidelines provided'}
 
-IMPORTANT: Use the provided release date (${validatedData.date}) prominently in the press release. Format the date appropriately in the press release header or opening paragraph.
+Use only provided facts, copy, dates, and contact details — no fabrication. Keep competitor info factual, neutral, and anonymized (no names). Remove all placeholders; no dummy or pending-input text.
 
 ${validatedData.brandTone ? `Follow these brand tone, voice, and guidelines: ${validatedData.brandTone}. If company boilerplate details are provided in the guidelines, incorporate them appropriately into the press release.` : ''}
 
