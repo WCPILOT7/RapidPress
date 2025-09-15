@@ -7,9 +7,12 @@ import { AuthProvider } from "@/contexts/auth-context";
 import { Navigation } from "@/components/navigation";
 import { ProtectedRoute } from "@/components/protected-route";
 import NotFound from "@/pages/not-found";
-import Home from "@/pages/home";
+import Home from "@/pages/home"; // legacy generation page
+import Dashboard from "@/pages/dashboard";
 import Advertisements from "@/pages/advertisements";
 import SimpleLanding from "@/pages/simple-landing";
+import Login from "@/pages/login";
+import Register from "@/pages/register";
 
 function Router() {
   return (
@@ -17,7 +20,7 @@ function Router() {
       <Route path="/dashboard">
         <ProtectedRoute>
           <Navigation />
-          <Home />
+          <Dashboard />
         </ProtectedRoute>
       </Route>
       <Route path="/advertisements">
@@ -26,7 +29,10 @@ function Router() {
           <Advertisements />
         </ProtectedRoute>
       </Route>
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
       <Route path="/" component={SimpleLanding} />
+      <Route component={NotFound} />
     </Switch>
   );
 }

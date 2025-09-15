@@ -1,5 +1,19 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Centralized 401 handler registry (simple subscription pattern)
+type UnauthorizedListener = () => void;
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+export function onUnauthorized(listener: UnauthorizedListener) {
+  unauthorizedListeners.add(listener);
+  return () => unauthorizedListeners.delete(listener);
+}
+
+async function handleUnauthorized() {
+  unauthorizedListeners.forEach((l) => {
+    try { l(); } catch {}
+  });
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -18,7 +32,9 @@ export async function apiRequest(
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
-
+  if (res.status === 401) {
+    await handleUnauthorized();
+  }
   await throwIfResNotOk(res);
   return res;
 }
@@ -34,7 +50,11 @@ export const getQueryFn: <T>(options: {
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      await handleUnauthorized();
       return null;
+    }
+    if (res.status === 401) {
+      await handleUnauthorized();
     }
 
     await throwIfResNotOk(res);
@@ -55,3 +75,19 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Convenience typed helpers (can be expanded later)
+export async function getPressReleases() {
+  const res = await apiRequest('GET', '/api/releases');
+  return res.json();
+}
+
+export async function getAdvertisements() {
+  const res = await apiRequest('GET', '/api/advertisements');
+  return res.json();
+}
+
+export async function getUsageSummary() {
+  const res = await apiRequest('GET', '/api/usage/summary');
+  return res.json();
+}
