@@ -1,4 +1,4 @@
-import { users, pressReleases, contacts, advertisements, type User, type InsertUser, type PressRelease, type InsertPressRelease, type Contact, type InsertContact, type Advertisement, type InsertAdvertisement } from "@shared/schema";
+import { users, pressReleases, contacts, advertisements, aiDocuments, apiKeys, usageEvents, ragQueries, embeddingCache, userProfiles, type User, type InsertUser, type PressRelease, type InsertPressRelease, type Contact, type InsertContact, type Advertisement, type InsertAdvertisement, type AIDocument, type InsertAIDocument, type ApiKey, type InsertApiKey, type UsageEvent, type InsertUsageEvent, type RagQuery, type InsertRagQuery, type EmbeddingCache, type InsertEmbeddingCache, type UserProfile, type InsertUserProfile } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -7,6 +7,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: number): Promise<User | undefined>;
+  getUserBySupabaseUserId(supabaseUserId: string): Promise<User | undefined>;
   
   // Press Release methods
   createPressRelease(userId: number, pressRelease: InsertPressRelease & { headline: string; release: string }): Promise<PressRelease>;
@@ -28,6 +29,32 @@ export interface IStorage {
   getAdvertisementById(id: number, userId: number): Promise<Advertisement | undefined>;
   updateAdvertisement(id: number, userId: number, updates: Partial<Advertisement>): Promise<Advertisement>;
   deleteAdvertisement(id: number, userId: number): Promise<void>;
+
+  // AI Documents (RAG)
+  createAIDocuments(userId: number, docs: InsertAIDocument[]): Promise<AIDocument[]>;
+  listAIDocuments(userId: number, filter?: { source?: string }): Promise<AIDocument[]>;
+  searchAIDocuments(userId: number, query: string, limit?: number): Promise<AIDocument[]>;
+
+  // API Keys
+  createApiKey(userId: number, data: Omit<InsertApiKey, 'userId'> & { rawKeyHash: string }): Promise<ApiKey>;
+  listApiKeys(userId: number): Promise<ApiKey[]>;
+  revokeApiKey(userId: number, id: number): Promise<void>;
+  touchApiKeyUsage(id: number): Promise<void>;
+  getApiKeyByHash(hash: string): Promise<ApiKey | undefined>;
+
+  // Usage Events
+  logUsageEvent(userId: number, data: Omit<InsertUsageEvent, 'userId'> & { tokensPrompt?: number; tokensCompletion?: number }): Promise<UsageEvent>;
+
+  // RAG Queries
+  logRagQuery(userId: number, data: Omit<InsertRagQuery, 'userId'>): Promise<RagQuery>;
+
+  // Embedding Cache
+  getOrInsertEmbeddingCache(userId: number, inputHash: string, model: string, embedding: string): Promise<EmbeddingCache>;
+
+  // Profiles
+  ensureUserProfile(userId: number): Promise<UserProfile>;
+  incrementUserTokens(userId: number, delta: number): Promise<void>;
+  setSupabaseUserId(userId: number, supabaseUserId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -48,6 +75,15 @@ export class DatabaseStorage implements IStorage {
   async getUserById(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
+  }
+
+  async getUserBySupabaseUserId(supabaseUserId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.supabaseUserId, supabaseUserId));
+    return user || undefined;
+  }
+
+  async setSupabaseUserId(id: number, supabaseUserId: string): Promise<void> {
+    await db.update(users).set({ supabaseUserId }).where(eq(users.id, id));
   }
 
   // Press Release methods
@@ -192,6 +228,114 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(advertisements)
       .where(and(eq(advertisements.id, id), eq(advertisements.userId, userId)));
+  }
+
+  // AI Documents (RAG)
+  async createAIDocuments(userId: number, docs: InsertAIDocument[]): Promise<AIDocument[]> {
+    const values = docs.map(d => ({ ...d, userId, metadata: d.metadata || null, embedding: d.embedding || null }));
+    const inserted = await db.insert(aiDocuments).values(values).returning();
+    return inserted;
+  }
+
+  async listAIDocuments(userId: number, filter?: { source?: string }): Promise<AIDocument[]> {
+    let q = db.select().from(aiDocuments).where(eq(aiDocuments.userId, userId));
+    // drizzle query builder lacks dynamic chaining example here kept simple; refine if needed
+    const rows: AIDocument[] = await q as unknown as AIDocument[];
+    return rows
+      .filter((r: AIDocument) => !filter?.source || r.source === filter.source)
+      .sort((a: AIDocument, b: AIDocument) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  async searchAIDocuments(userId: number, query: string, limit = 10): Promise<AIDocument[]> {
+    const all = await this.listAIDocuments(userId);
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const scored = all.map(doc => {
+      const text = (doc.title || '') + ' ' + doc.content;
+      const lc = text.toLowerCase();
+      let score = 0;
+      for (const t of terms) if (lc.includes(t)) score += 1;
+      return { doc, score };
+    });
+    return scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score).slice(0, limit).map(s => s.doc);
+  }
+
+  // API Keys
+  async createApiKey(userId: number, data: Omit<InsertApiKey, 'userId'> & { rawKeyHash: string }): Promise<ApiKey> {
+    const [row] = await db.insert(apiKeys).values({
+      userId,
+      keyHash: data.rawKeyHash,
+      name: data.name || null,
+    }).returning();
+    return row;
+  }
+
+  async listApiKeys(userId: number): Promise<ApiKey[]> {
+    const rows = await db.select().from(apiKeys).where(eq(apiKeys.userId, userId));
+    return rows;
+  }
+
+  async revokeApiKey(userId: number, id: number): Promise<void> {
+    await db.update(apiKeys).set({ revoked: true }).where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId)));
+  }
+
+  async touchApiKeyUsage(id: number): Promise<void> {
+    await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, id));
+  }
+
+  async getApiKeyByHash(hash: string): Promise<ApiKey | undefined> {
+    const rows = await db.select().from(apiKeys).where(and(eq(apiKeys.keyHash, hash), eq(apiKeys.revoked, false)));
+    return rows[0] || undefined;
+  }
+
+  // Usage Events
+  async logUsageEvent(userId: number, data: Omit<InsertUsageEvent, 'userId'> & { tokensPrompt?: number; tokensCompletion?: number }): Promise<UsageEvent> {
+    const [row] = await db.insert(usageEvents).values({
+      userId,
+      eventType: data.eventType,
+      tokensPrompt: data.tokensPrompt || null,
+      tokensCompletion: data.tokensCompletion || null,
+      costUsd: data.costUsd || null,
+      latencyMs: data.latencyMs || null,
+      model: data.model || null,
+      meta: data.meta ? JSON.stringify(data.meta) : null,
+    }).returning();
+    return row;
+  }
+
+  // RAG Queries
+  async logRagQuery(userId: number, data: Omit<InsertRagQuery, 'userId'>): Promise<RagQuery> {
+    const [row] = await db.insert(ragQueries).values({
+      userId,
+      query: data.query,
+      strategy: data.strategy,
+      resultsCount: data.resultsCount || 0,
+      usedInGeneration: data.usedInGeneration || false,
+      latencyMs: data.latencyMs || null,
+    }).returning();
+    return row;
+  }
+
+  // Embedding Cache
+  async getOrInsertEmbeddingCache(userId: number, inputHash: string, model: string, embedding: string): Promise<EmbeddingCache> {
+    const existing = await db.select().from(embeddingCache).where(and(eq(embeddingCache.userId, userId), eq(embeddingCache.inputHash, inputHash), eq(embeddingCache.model, model)));
+    if (existing.length) return existing[0];
+    const [row] = await db.insert(embeddingCache).values({ userId, inputHash, model, embedding }).returning();
+    return row;
+  }
+
+  // Profiles
+  async ensureUserProfile(userId: number): Promise<UserProfile> {
+    const existing = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+    if (existing.length) return existing[0];
+    const [row] = await db.insert(userProfiles).values({ userId }).returning();
+    return row;
+  }
+
+  async incrementUserTokens(userId: number, delta: number): Promise<void> {
+    // naive approach: fetch then update (race conditions acceptable for now). Later: single SQL update with returning.
+    const profile = await this.ensureUserProfile(userId);
+    const newValue = (profile.quotaMonthlyTokensUsed || 0) + delta;
+    await db.update(userProfiles).set({ quotaMonthlyTokensUsed: newValue }).where(eq(userProfiles.userId, userId));
   }
 }
 
