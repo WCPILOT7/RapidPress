@@ -3,4 +3,42 @@ dist
 .DS_Store
 server/public
 vite.config.ts.*
+.vscode
+
+# Local environment & secrets
+.env
+.env.*
+!.env.example
+
+# Logs & diagnostics
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Uploads / generated media
+uploads/
+
+# Coverage & test artefacts
+coverage/
+.nyc_output/
+
+# TypeScript build info / ts incremental
+*.tsbuildinfo
+
+# Temp & cache directories
+tmp/
+temp/
+.cache/
+.turbo/
+
+# IDE / editor specific
+.idea/
+.history/
+
+# Misc build outputs
+*.tgz
+*.tar.gz
+
+# Next steps placeholder (add more patterns above this line if needed)
 *.tar.gz.vscode
